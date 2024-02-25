@@ -7,104 +7,110 @@ import threading
 
 class TKwindow():
 	def __init__(self, width, height):
-		self._width = width
-		self._height = height
-		self._show_fps = False
-		self._fps_prev = None
+		self.__width = width
+		self.__height = height
+		self.__show_fps = False
+		self.__fps_prev = 0
 
-		self._done = False
-		self._loop_thread = threading.Thread(target=self._init)
-		self._loop_thread.start()
-		self._pressed = set()
-		while not self._done:
-			pass
+		self.__done = False
+		self.__loop_thread = threading.Thread(target=self.__init_window)
+		self.__loop_thread.start()
+		self.__pressed = set()
+		while not self.__done:
+			time.sleep(0.1)
 
-	def _init(self):
-		width = self._width
-		height = self._height
+	def __init_window(self):
+		self.__root = tkinter.Tk()
+		self.__root.geometry(f'{self.__width}x{self.__height}')
+		self.__root.resizable(width=False, height=False)
 
-		self._root = tkinter.Tk()
-		self._root.geometry(f'{width}x{height}')
-		self._root.resizable(width=False, height=False)
+		self.__canvas = tkinter.Canvas(self.__root,
+					       width=self.__width,
+					       height=self.__height,
+					       highlightthickness=0)
+		self.__canvas.place(x=0, y=0)
 
-		self._canvas = tkinter.Canvas(self._root, width=width, height=height,
-				highlightthickness=0)
-		self._canvas.place(x=0, y=0)
+		self.__key_callback = None
+		self.__root.bind('<Key>', self.__on_key_press)
+		self.__root.bind('<KeyRelease>', self.__on_key_release)
+		self.__root.bind('<Button>', self.__on_mouse_press)
+		self.__root.bind('<ButtonRelease>', self.__on_mouse_release)
+		self.__root.bind('<<Draw>>', self.__do_draw)
 
-		self._key_hook = None
-		self._root.bind('<Key>', self._on_key_press)
-		self._root.bind('<KeyRelease>', self._on_key_release)
-		self._root.bind('<Button>', self._on_mouse_press)
-		self._root.bind('<ButtonRelease>', self._on_mouse_release)
-		self._root.bind('<<Draw>>', self._draw)
-		# self._root.protocol("WM_DELETE_WINDOW", self._on_close)
+		self.__im_id = 0
+		self.__txt_id = 0
+		self.__done = True
+		self.__root.mainloop()
 
-		self._done = True
-		self._root.mainloop()
-
-	@property
 	def width(self):
-		return self._width
+		return self.__width
 
-	@property
 	def height(self):
-		return self._height
+		return self.__height
 
 	def mouse(self):
-		offset = self._root.geometry().split('+')[1:]
-		x = self._root.winfo_pointerx() - int(offset[0]) - 9
-		y = self._root.winfo_pointery() - int(offset[1]) - 30
+		offset = self.__root.geometry().split('+')[1:]
+		x = self.__root.winfo_pointerx() - int(offset[0]) - 9
+		y = self.__root.winfo_pointery() - int(offset[1]) - 30
 		assert x >= 0 and y >= 0
 		return x, y
 
 	def key_hook(self, callback):
-		self._key_hook = callback
+		self.__key_callback = callback
 
 	def draw(self, image):
-		self._image = image
-		self._root.event_generate('<<Draw>>')
+		assert image.shape == (self.__height, self.__width, 3)
 
-	def _draw(self, event):
-		image = self._image
-		assert image.shape == (self._height, self._width, 3)
+		self.__image = image
+		self.__done = False
+		self.__root.event_generate('<<Draw>>')
+		while not self.__done:
+			pass
 
-		img_pil = Image.fromarray(np.uint8(image))
-		self._img = ImageTk.PhotoImage(img_pil)
-		self._canvas.create_image(0, 0, anchor=tkinter.NW, image=self._img)
+	def __do_draw(self, event):
+		img = Image.fromarray(np.uint8(self.__image))
 
-		if self._show_fps:
-			if self._fps_prev is None:
-				f = 0
-			else:
-				f = round(1 / (time.time() - self._fps_prev))
-			self._canvas.create_text(25, 10, text=f'fps: {f}', fill='white', font=("Helvetica 10 bold"))
-			self._fps_prev = time.time()
+		self.__canvas.delete('img')
 
-		self._root.update()
+		self.__tk_img = ImageTk.PhotoImage(img)
+
+		self.__canvas.delete(self.__im_id)
+		self.__im_id = self.__canvas.create_image(0, 0,
+							  anchor=tkinter.NW,
+							  image=self.__tk_img)
+
+		if self.__show_fps:
+			f = round(1 / (time.time() - self.__fps_prev))
+
+			self.__canvas.delete(self.__txt_id)
+			self.__txt_id = self.__canvas.create_text(25, 10,
+								  text=f'fps: {f}',
+								  fill='white',
+								  font=("Helvetica 10 bold"))
+			self.__fps_prev = time.time()
+		self.__root.update()
+		self.__done = True
 
 	def fps(self, flag):
-		self._show_fps = bool(flag)
+		self.__show_fps = bool(flag)
 
-	def _loop(self):
-		self._root.mainloop()
+	def __on_key_press(self, event):
+		if self.__key_callback is not None and event.keycode not in self.__pressed:
+			self.__pressed.add(event.keycode)
+			self.__key_callback(event.keycode, True)
 
-	def _on_key_press(self, event):
-		if self._key_hook is not None and event.keycode not in self._pressed:
-			self._pressed.add(event.keycode)
-			self._key_hook(event.keycode, True)
+	def __on_key_release(self, event):
+		if self.__key_callback is not None:
+			self.__pressed.discard(event.keycode)
+			self.__key_callback(event.keycode, False)
 
-	def _on_key_release(self, event):
-		if self._key_hook is not None:
-			self._pressed.discard(event.keycode)
-			self._key_hook(event.keycode, False)
+	def __on_mouse_press(self, event):
+		if self.__key_callback is not None:
+			self.__key_callback(event.num, True)
 
-	def _on_mouse_press(self, event):
-		if self._key_hook is not None:
-			self._key_hook(event.num, True)
-
-	def _on_mouse_release(self, event):
-		if self._key_hook is not None:
-			self._key_hook(event.num, False)
+	def __on_mouse_release(self, event):
+		if self.__key_callback is not None:
+			self.__key_callback(event.num, False)
 
 
 if __name__ == '__main__':
@@ -113,19 +119,19 @@ if __name__ == '__main__':
 	def key_callback(key, pressed):
 		if pressed:
 			if key <= 3:
-				print('pressed mouse at', win.mouse())
+				print(f'pressed mouse key {key} at', win.mouse())
 			else:
 				print('pressed key:', key)
 		else:
 			print('released key', key)
 
-	# win = TKwindow(1000, 800)
 	win = TKwindow(600, 400)
 	win.fps(True)
 	win.key_hook(key_callback)
 
+	img = np.zeros([win.height(), win.width(), 3], dtype=np.uint8)
 	while True:
-		img = np.zeros([win.height, win.width, 3], dtype=np.uint8)
+		img.fill(0)
 		img[:, :, random.randint(0, 2)] = 255
 		img[1:-1, 1:-1, :] = 0
 
