@@ -1,27 +1,58 @@
 
-
 import tkinter
 import numpy as np
 from PIL import Image, ImageTk
-import random
+import time
 
-IM_WIDTH = 600
-IM_HEIGHT = 400
+class TKwindow():
+	def __init__(self, width, height):
+		self._width = width
+		self._height = height
 
-root = tkinter.Tk()
-root.geometry(f'{IM_WIDTH}x{IM_HEIGHT}')
+		self._root = tkinter.Tk()
+		self._root.geometry(f'{width}x{height}')
+		self._root.resizable(width=False, height=False)
 
-canvas = tkinter.Canvas(root, width=IM_WIDTH, height=IM_HEIGHT, highlightthickness=0)
-canvas.place(x=0, y=0)
+		self._canvas = tkinter.Canvas(self._root, width=width, height=height,
+				highlightthickness=0)
+		self._canvas.place(x=0, y=0)
 
-while True:
-	img_arr = np.zeros([IM_HEIGHT, IM_WIDTH, 3], dtype=np.uint8)
-	img_arr[:,:,0] = random.randint(0, 255)
-	img_arr[1:-1, 1:-1, 0] = 0
+	@property
+	def width(self):
+		return self._width
 
-	img_pil = Image.fromarray(np.uint8(img_arr))
-	img_tk = ImageTk.PhotoImage(img_pil)
-	canvas.create_image(0, 0, anchor=tkinter.NW, image=img_tk)
+	@property
+	def height(self):
+		return self._height
 
-	root.update()
+	def draw(self, image, x=0, y=0):
+		assert image.shape == (self._height, self._width, 3)
+
+		img_pil = Image.fromarray(np.uint8(image))
+		self._img = ImageTk.PhotoImage(img_pil)
+		self._canvas.create_image(x, y, anchor=tkinter.NW, image=self._img)
+
+		self._root.update()
+
+	def fps(self, flag):
+		self._show_fps = bool(flag)
+
+	def loop(self):
+		self._root.mainloop()
+
+
+if __name__ == '__main__':
+	import random
+
+	win = TKwindow(1000, 800)
+	prev = time.time()
+	while True:
+		img = np.zeros([win.height, win.width, 3], dtype=np.uint8)
+		img[:, :, random.randint(0, 2)] = 255
+		img[1:-1, 1:-1, :] = 0
+		win.draw(img)
+
+		t = time.time()
+		print('fps:', 1 / (t - prev))
+		prev = t
 
