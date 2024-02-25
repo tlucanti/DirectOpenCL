@@ -32,7 +32,6 @@ class TKwindow():
 		self._canvas.place(x=0, y=0)
 
 		self._key_hook = None
-		self._mouse = (0, 0)
 		self._root.bind('<Key>', self._on_key_press)
 		self._root.bind('<KeyRelease>', self._on_key_release)
 		self._root.bind('<Button>', self._on_mouse_press)
@@ -51,9 +50,12 @@ class TKwindow():
 	def height(self):
 		return self._height
 
-	@property
 	def mouse(self):
-		return self._mouse
+		offset = self._root.geometry().split('+')[1:]
+		x = self._root.winfo_pointerx() - int(offset[0]) - 9
+		y = self._root.winfo_pointery() - int(offset[1]) - 30
+		assert x >= 0 and y >= 0
+		return x, y
 
 	def key_hook(self, callback):
 		self._key_hook = callback
@@ -110,7 +112,10 @@ if __name__ == '__main__':
 
 	def key_callback(key, pressed):
 		if pressed:
-			print('pressed key:', key)
+			if key <= 3:
+				print('pressed mouse at', win.mouse())
+			else:
+				print('pressed key:', key)
 		else:
 			print('released key', key)
 
