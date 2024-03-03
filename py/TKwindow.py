@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image, ImageTk
 import time
 import threading
+from KeyTracker import KeyTracker
 
 class TKwindow():
     def __init__(self, width, height):
@@ -28,12 +29,13 @@ class TKwindow():
                                        height=self.__height, highlightthickness=0)
         self.__canvas.place(x=0, y=0)
 
-        self.__key_callback = None
-        self.__root.bind('<Key>', self.__on_key_press)
-        self.__root.bind('<KeyRelease>', self.__on_key_release)
+        self.__key_tracker = KeyTracker(None)
+        self.__root.bind('<Key>', self.__key_tracker.press_checker)
+        self.__root.bind('<KeyRelease>', self.__key_tracker.release_checker)
         self.__root.bind('<Button>', self.__on_mouse_press)
         self.__root.bind('<ButtonRelease>', self.__on_mouse_release)
         self.__root.bind('<<Draw>>', self.__do_draw)
+        self.last = 0
 
         self.__im_id = 0
         self.__txt_id = 0
@@ -55,6 +57,7 @@ class TKwindow():
 
     def key_hook(self, callback):
         self.__key_callback = callback
+        self.__key_tracker.callback = callback
 
     def draw(self, image):
         assert image.shape == (self.__height, self.__width, 3)
@@ -63,7 +66,7 @@ class TKwindow():
         self.__done = False
         self.__root.event_generate('<<Draw>>')
         while not self.__done:
-            pass
+            time.sleep(1e-5)
 
     def __do_draw(self, event):
         img = Image.fromarray(np.uint8(self.__image))
@@ -90,16 +93,6 @@ class TKwindow():
 
     def fps(self, flag):
         self.__show_fps = bool(flag)
-
-    def __on_key_press(self, event):
-        if self.__key_callback is not None and event.keycode not in self.__pressed:
-            self.__pressed.add(event.keycode)
-            self.__key_callback(event.keycode, True)
-
-    def __on_key_release(self, event):
-        if self.__key_callback is not None:
-            self.__pressed.discard(event.keycode)
-            self.__key_callback(event.keycode, False)
 
     def __on_mouse_press(self, event):
         if self.__key_callback is not None:
