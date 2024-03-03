@@ -107,13 +107,12 @@ if __name__ == '__main__':
     import random
 
     def key_callback(key, pressed):
-        if pressed:
-            if key <= 3:
-                print(f'pressed mouse key {key} at', win.mouse())
-            else:
-                print('pressed key:', key)
+        t = 'pressed' if pressed else 'released'
+
+        if key <= 2:
+            print(f'{t} mouse key {key} at {win.mouse}')
         else:
-            print('released key', key)
+            print(f'{t} keyboard key {key}')
 
     win = TKwindow(600, 400)
     win.fps(True)
