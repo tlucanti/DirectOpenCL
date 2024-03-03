@@ -1,12 +1,15 @@
 
+import time
+import threading
+
 import tkinter
 import numpy as np
 from PIL import Image, ImageTk
-import time
-import threading
-from KeyTracker import KeyTracker
 
-class TKwindow():
+from KeyTracker import KeyTracker
+from GUIwindow import GUIwindow
+
+class TKwindow(GUIwindow):
     def __init__(self, width, height):
         self.__width = width
         self.__height = height
@@ -110,7 +113,7 @@ if __name__ == '__main__':
         t = 'pressed' if pressed else 'released'
 
         if key <= 2:
-            print(f'{t} mouse key {key} at {win.mouse}')
+            print(f'{t} mouse key {key} at {win.mouse()}')
         else:
             print(f'{t} keyboard key {key}')
 

@@ -1,5 +1,5 @@
 
-class Window():
+class GUIwindow():
     """
     A class to represent GUI window with raw pixel access and keyboard/mouse
     event management
@@ -94,6 +94,15 @@ class Window():
     def mouse(self):
         """
         Get current position of mouse pointer
+
+        Returns
+        -------
+        tuple:
+            pair of integers - horizontal and vertical coordinates of current
+            mouse position. Coordinates has position relative to the top left
+            window border. Note, that coordinates can have negative values or
+            values that are larger then width() or height() if mouse if beyond
+            the window at the monent of function call
         """
         pass
 
