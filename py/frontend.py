@@ -1,6 +1,6 @@
 
-import signal
 import ctypes
+import numpy as np
 
 class Window():
 
@@ -12,7 +12,8 @@ class Window():
         print('WARN: window was destroyed')
 
     def draw(self, image):
-        print(f'OK: image drawn {image}')
+        print('OK: image drawn')
+        print(image.copy().reshape((self.width, self.height)))
 
 
 
@@ -22,10 +23,10 @@ def window_constructor(width, height):
     print(f'py: called window constructor: new window {id(window):x}')
     return window
 
-@ctypes.CFUNCTYPE(None, ctypes.py_object, ctypes.c_void_p)
-def window_draw(window, raw_pixels):
+@ctypes.CFUNCTYPE(None, ctypes.py_object, ctypes.POINTER(ctypes.c_uint))
+def window_draw(window, uptr):
     print('py: called window draw method')
-    print(hex(raw_pixels))
+    raw_pixels = np.ctypeslib.as_array(uptr, shape=[window.width * window.height])
     window.draw(raw_pixels)
 
 

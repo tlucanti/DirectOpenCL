@@ -71,7 +71,20 @@ int main()
 
 	gui_bootstrap();
 
-	gui_create_window(&window, 800, 600);
+	gui_create_window(&window, 10, 10);
+
+	int i = 0;
+	for (int y = 0; y < 10; y++) {
+		for (int x = 0; x < 10; x++) {
+			if (x == 0 || y == 0 || x == 9 || y == 9) {
+				window.raw_pixels[i] = 0xff;
+			} else {
+				window.raw_pixels[i] = 0x1;
+			}
+			i++;
+		}
+	}
+
 	gui_window_draw(&window);
 	gui_window_destroy(&window);
 }
