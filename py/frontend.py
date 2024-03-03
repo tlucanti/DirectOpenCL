@@ -2,20 +2,7 @@
 import ctypes
 import numpy as np
 
-class Window():
-
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
-
-    def __del__(self):
-        print('WARN: window was destroyed')
-
-    def draw(self, image):
-        print('OK: image drawn')
-        print(image.copy().reshape((self.width, self.height)))
-
-
+from TKwindow import TKwindow as Window
 
 @ctypes.CFUNCTYPE(ctypes.py_object, ctypes.c_uint, ctypes.c_uint)
 def window_constructor(width, height):
@@ -25,9 +12,15 @@ def window_constructor(width, height):
 
 @ctypes.CFUNCTYPE(None, ctypes.py_object, ctypes.POINTER(ctypes.c_uint))
 def window_draw(window, uptr):
-    print('py: called window draw method')
-    raw_pixels = np.ctypeslib.as_array(uptr, shape=[window.width * window.height])
-    window.draw(raw_pixels)
+    raw_pixels = np.ctypeslib.as_array(uptr, shape=[window.width() * window.height()])
+    pixels = raw_pixels.copy().reshape(window.height(), window.width())
+    red = (pixels & 0xFF0000) >> 16
+    green = (pixels & 0x00FF00) >> 8
+    blue = pixels & 0x0000FF
+    image = np.stack([red, green, blue], axis=2)
+
+    assert image.shape == (window.height(), window.width(), 3)
+    window.draw(image)
 
 
 @ctypes.CFUNCTYPE(None, ctypes.py_object)

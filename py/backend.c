@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <malloc.h>
+#include <stdlib.h>
 
 #define for_each_pixel(x, y, i, width, height)	\
 	for (y = 0; y < height; y++, i++)	\
@@ -51,7 +52,7 @@ void gui_create_window(struct gui_window *window, unsigned int width, unsigned i
 
 void gui_window_draw(const struct gui_window *window)
 {
-	printf("c: calling draw callback: %p\n", window->raw_pixels);
+	//printf("c: calling draw callback: %p\n", window->raw_pixels);
 	_PY_window_draw(window->PY_window, window->raw_pixels);
 }
 
@@ -68,24 +69,33 @@ void gui_window_destroy(struct gui_window *window)
 int main()
 {
 	struct gui_window window;
+	const int width = 800, height = 600;
+
+	srand(0);
 
 	gui_bootstrap();
 
-	gui_create_window(&window, 10, 10);
+	gui_create_window(&window, width, height);
 
-	int i = 0;
-	for (int y = 0; y < 10; y++) {
-		for (int x = 0; x < 10; x++) {
-			if (x == 0 || y == 0 || x == 9 || y == 9) {
-				window.raw_pixels[i] = 0xff;
-			} else {
-				window.raw_pixels[i] = 0x1;
+	while (1) {
+		const int w = 1;
+		unsigned int color = 0xff << (8 * (rand() % 3));
+		int i = 0;
+
+		printf("drawing with color %x\n", color);
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				if (x < w || y < w || height - y <= w || width - x <= w) {
+					window.raw_pixels[i] = color;
+				} else {
+					window.raw_pixels[i] = 0;
+				}
+				i++;
 			}
-			i++;
 		}
+		gui_window_draw(&window);
 	}
 
-	gui_window_draw(&window);
 	gui_window_destroy(&window);
 }
 
