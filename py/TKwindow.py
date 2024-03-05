@@ -33,8 +33,8 @@ class TKwindow(GUIwindow):
         self.__canvas.place(x=0, y=0)
 
         self.__key_tracker = KeyTracker(None)
-        self.__root.bind('<Key>', self.__key_tracker.press_checker)
-        self.__root.bind('<KeyRelease>', self.__key_tracker.release_checker)
+        self.__root.bind('<Key>', self.__key_tracker.press)
+        self.__root.bind('<KeyRelease>', self.__key_tracker.release)
         self.__root.bind('<Button>', self.__on_mouse_press)
         self.__root.bind('<ButtonRelease>', self.__on_mouse_release)
         self.__root.bind('<<Draw>>', self.__do_draw)
@@ -55,7 +55,6 @@ class TKwindow(GUIwindow):
         offset = self.__root.geometry().split('+')[1:]
         x = self.__root.winfo_pointerx() - int(offset[0]) - 9
         y = self.__root.winfo_pointery() - int(offset[1]) - 30
-        assert x >= 0 and y >= 0
         return x, y
 
     def key_hook(self, callback):
@@ -128,4 +127,3 @@ if __name__ == '__main__':
         img[1:-1, 1:-1, :] = 0
 
         win.draw(img)
-

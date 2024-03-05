@@ -1,9 +1,10 @@
 
 import threading
 import time
+import platform
 from collections import defaultdict
 
-class KeyTracker():
+class _KeyTrackerLinux():
 
     DELTA = 0.05
 
@@ -17,7 +18,7 @@ class KeyTracker():
         self.metadata = defaultdict(self.KeyMetadata)
         self.callback = callback
 
-    def press_checker(self, event):
+    def press(self, event):
         meta = self.metadata[event.keycode]
 
         meta.last_press_time = time.time()
@@ -25,7 +26,7 @@ class KeyTracker():
             meta.released = False
             self.callback(event.keycode, True)
 
-    def release_checker(self, event):
+    def release(self, event):
         meta = self.metadata[event.keycode]
 
         meta.last_release_time = time.time()
@@ -37,6 +38,27 @@ class KeyTracker():
         if time.time() - meta.last_press_time > self.DELTA and not meta.released:
             meta.released = True
             self.callback(event.keycode, False)
+
+class _KeyTrackerWindows():
+
+    def __init__(self, callback):
+        self.pressed = set()
+        self.callback = callback
+
+    def press(self, event):
+        if event.keycode not in self.pressed:
+            self.pressed.add(event.keycode)
+            self.callback(event.keycode, True)
+
+    def release(self, event):
+        self.pressed.discard(event.keycode)
+        self.callback(event.keycode, False)
+
+
+if platform.system() == 'Windows':
+    KeyTracker = _KeyTrackerWindows
+else:
+    KeyTracker = _KeyTrackerLinux
 
 
 if __name__ == '__main__':
@@ -51,8 +73,7 @@ if __name__ == '__main__':
     window = Tk()
 
     key_tracker = KeyTracker(key_callback)
-    window.bind('<KeyPress>', key_tracker.press_checker)
-    window.bind('<KeyRelease>', key_tracker.release_checker)
+    window.bind('<KeyPress>', key_tracker.press)
+    window.bind('<KeyRelease>', key_tracker.release)
 
     window.mainloop()
-
