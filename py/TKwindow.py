@@ -73,8 +73,6 @@ class TKwindow(GUIwindow):
     def __do_draw(self, event):
         img = Image.fromarray(np.uint8(self.__image))
 
-        self.__canvas.delete('img')
-
         self.__tk_img = ImageTk.PhotoImage(img)
 
         self.__canvas.delete(self.__im_id)

@@ -2,7 +2,8 @@
 import ctypes
 import numpy as np
 
-from TKwindow import TKwindow as Window
+#from TKwindow import TKwindow as Window
+from PILwindow import PILwindow as Window
 
 @ctypes.CFUNCTYPE(ctypes.py_object, ctypes.c_uint, ctypes.c_uint)
 def window_constructor(width, height):
@@ -22,6 +23,11 @@ def window_draw(window, uptr):
     assert image.shape == (window.height(), window.width(), 3)
     window.draw(image)
 
+@ctypes.CFUNCTYPE(None, ctypes.py_object,
+                  ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_int, ctypes.c_bool))
+def window_key_hook(window, callback):
+    print(f'py: called key_hook: callback {id(callback):x}')
+    window.key_hook(callback)
 
 @ctypes.CFUNCTYPE(None, ctypes.py_object)
 def window_destroy(window):
@@ -37,6 +43,9 @@ def main():
 
     print('py: calling set_window_draw')
     dll._set_PY_window_draw(window_draw)
+
+    print('py: calling set key_hook')
+    dll._set_PY_window_key_hook(window_key_hook)
 
     print('py: calling set_window_destructor')
     dll._set_PY_window_destructor(window_destroy)
