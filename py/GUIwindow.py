@@ -7,7 +7,7 @@ class GUIwindow():
     Methods
     -------
 
-    Constructor(width, height)
+    Constructor(width, height, winid)
         creates new window with given geometry
 
     width():
@@ -24,9 +24,12 @@ class GUIwindow():
 
     mouse():
         returns current mouse position
+
+    wfi():
+        wait for interrupt
     """
 
-    def __init__(self, width, height):
+    def __init__(self, width, height, winid=None):
         """
         Constructor reates new gui window with given window size
 
@@ -36,7 +39,11 @@ class GUIwindow():
             the width of creating window in pixels
         height : positive int
             the height of creating window in pixels
-
+        winptr : any, optional
+            the window identification data. This value will be sent as first
+            argument to keyboard callback function to identify from what window
+            was keyboard interrupt raised. If winid is None - self (this object)
+            will be used instead
         """
         pass
 
@@ -82,7 +89,9 @@ class GUIwindow():
         Parameters
         ----------
         callback : function
-            function should take 2 arguments:
+            function should take 3 arguments:
+             - any: window identificator which was passed into constructor of
+               this class
              - positive integer: keycode of pressed or released keyboard key or
                mouse button
              - bool: flag of event type (True - key was pressed,
@@ -103,6 +112,17 @@ class GUIwindow():
             window border. Note, that coordinates can have negative values or
             values that are larger then width() or height() if mouse if beyond
             the window at the monent of function call
+        """
+        pass
+
+    def wfi(self):
+        """
+        Wait for any keyboard event. Function blocks until any key is pressed,
+        even if keyboard callback is not set
+
+        Returns
+        -------
+        None
         """
         pass
 
