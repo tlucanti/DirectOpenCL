@@ -1,52 +1,54 @@
 
-#include <stdio.h>
 #include <stdbool.h>
 #include <malloc.h>
-#include <stdlib.h>
+
+#include "../backend.h"
+#include "../common.h"
 
 #define for_each_pixel(x, y, i, width, height)	\
 	for (y = 0; y < height; y++, i++)	\
 		for (x = 0; x < width; x++, i++)
 
-struct gui_window {
-	void *PY_window;
-	unsigned int *raw_pixels;
-};
+typedef void *(*PY_window_constructor_t)(unsigned int, unsigned int, void *);
+typedef void (*PY_window_draw_t)(void *, unsigned int *);
+typedef void (*PY_window_key_hook_t)(void *, key_hook_t);
+typedef void (*PY_window_wfi_t)(void *);
+typedef void (*PY_window_destructor_t)(void *);
 
-typedef void (*key_hook_t)(struct gui_window *window, int keycode, bool pressed);
+PY_window_constructor_t PY_window_constructor = NULL;
+PY_window_draw_t PY_window_draw = NULL;
+PY_window_key_hook_t PY_window_key_hook = NULL;
+PY_window_wfi_t PY_window_wfi = NULL;
+PY_window_destructor_t PY_window_destructor = NULL;
 
-typedef void *(*_PY_window_constructor_t)(unsigned int, unsigned int);
-typedef void (*_PY_window_draw_t)(void *, unsigned int *);
-typedef void (*_PY_window_key_hook_t)(void *, void *);
-typedef void (*_PY_window_destructor_t)(void *);
-
-_PY_window_constructor_t _PY_window_constructor = NULL;
-_PY_window_draw_t _PY_window_draw = NULL;
-_PY_window_key_hook_t _PY_window_key_hook = NULL;
-_PY_window_destructor_t _PY_window_destructor = NULL;
-
-void _set_PY_window_constructor(_PY_window_constructor_t func)
+__noinline __used
+void _set_PY_window_constructor(PY_window_constructor_t func)
 {
-	printf("c: constructor set to %p\n", func);
-	_PY_window_constructor = func;
+	PY_window_constructor = func;
 }
 
-void _set_PY_window_draw(_PY_window_draw_t func)
+__noinline __used
+void _set_PY_window_draw(PY_window_draw_t func)
 {
-	printf("c: draw callback set to %p\n", func);
-	_PY_window_draw = func;
+	PY_window_draw = func;
 }
 
-void _set_PY_window_key_hook(_PY_window_key_hook_t func)
+__noinline __used
+void _set_PY_window_key_hook(PY_window_key_hook_t func)
 {
-	printf("c: key hook set to %p\n", func);
-	_PY_window_key_hook = func;
+	PY_window_key_hook = func;
 }
 
-void _set_PY_window_destructor(_PY_window_destructor_t func)
+__noinline __used
+void _set_PY_window_wfi(PY_window_wfi_t func)
 {
-	printf("c: destructor set to %p\n", func);
-	_PY_window_destructor = func;
+	PY_window_wfi = func;
+}
+
+__noinline __used
+void _set_PY_window_destructor(PY_window_destructor_t func)
+{
+	PY_window_destructor = func;
 }
 
 void gui_bootstrap(void)
@@ -55,70 +57,60 @@ void gui_bootstrap(void)
 
 void gui_create(struct gui_window *window, unsigned int width, unsigned int height)
 {
-	printf("c: calling window constructor\n");
-	window->PY_window = _PY_window_constructor(width, height);
-	printf("c: created window %p\n", window->PY_window);
-	window->raw_pixels = malloc(sizeof(unsigned int) * width * height);
+	window->__PY_window = PY_window_constructor(width, height, window);
+	window->__width = width;
+	window->__height = height;
+	window->__length = (unsigned long)width * height;
+	window->__raw_pixels = malloc(sizeof(unsigned int) * window->__length);
 }
 
 void gui_draw(const struct gui_window *window)
 {
-	//printf("c: calling draw callback: %p\n", window->raw_pixels);
-	_PY_window_draw(window->PY_window, window->raw_pixels);
+	PY_window_draw(window->__PY_window, window->__raw_pixels);
 }
 
 void gui_key_hook(struct gui_window *window, key_hook_t hook)
 {
-	_PY_window_key_hook(window->PY_window, hook);
+	PY_window_key_hook(window->__PY_window, hook);
+}
+
+void gui_wfi(struct gui_window *window)
+{
+	PY_window_wfi(window->__PY_window);
 }
 
 void gui_destroy(struct gui_window *window)
 {
-	printf("c: destroying window %p\n", window->PY_window);
-	_PY_window_destructor(window->PY_window);
-	free(window->raw_pixels);
+	printf("c: destroying window %p\n", window->__PY_window);
+	PY_window_destructor(window->__PY_window);
+	free(window->__raw_pixels);
 
-	window->PY_window = NULL;
-	window->raw_pixels = NULL;
+	window->__PY_window = NULL;
+	window->__raw_pixels = NULL;
 }
 
-void callback(struct gui_window *window, int keycode, bool pressed)
+void gui_set_pixel_raw(struct gui_window *window, unsigned long i, unsigned color)
 {
-	printf("window (%p): keyboard event %d\n", window, keycode);
+	window->__raw_pixels[i] = color;
 }
 
-int main()
+void gui_set_pixel(struct gui_window *window, unsigned x, unsigned y, unsigned color)
 {
-	struct gui_window window;
-	const int width = 800, height = 600;
+	gui_set_pixel_raw(window, (unsigned long)y * window->__width + x, color);
+}
 
-	srand(0);
-
-	gui_bootstrap();
-
-	gui_create(&window, width, height);
-	gui_key_hook(&window, callback);
-
-	while (1) {
-		const int w = 1;
-		unsigned int color = 0xff << (8 * (rand() % 3));
-		int i = 0;
-
-		printf("drawing with color %x\n", color);
-		for (int y = 0; y < height; y++) {
-			for (int x = 0; x < width; x++) {
-				if (x < w || y < w || height - y <= w || width - x <= w) {
-					window.raw_pixels[i] = color;
-				} else {
-					window.raw_pixels[i] = 0;
-				}
-				i++;
-			}
-		}
-		gui_draw(&window);
-		break;
+int gui_set_pixel_raw_safe(struct gui_window *window, unsigned long i, unsigned color)
+{
+	if (i < window->__length) {
+		window->__raw_pixels[i] = color;
+		return 0;
+	} else {
+		return 1;
 	}
+}
 
-	gui_destroy(&window);
+int gui_set_pixel_safe(struct gui_window *window, unsigned x, unsigned y, unsigned color)
+{
+	return gui_set_pixel_raw_safe(window, (unsigned long)y * window->__width + x, color);
 }
 
