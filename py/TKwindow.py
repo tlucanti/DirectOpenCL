@@ -8,20 +8,21 @@ from PIL import Image, ImageTk
 
 from KeyTracker import KeyTracker
 from GUIwindow import GUIwindow
+import keycodes
 
 class TKwindow(GUIwindow):
-    def __init__(self, width, height):
+    def __init__(self, width, height, winid=None):
         self.__width = width
         self.__height = height
+        self.__winid = self if winid is None else winid
         self.__show_fps = False
         self.__fps_prev = 0
 
         self.__done = False
         self.__loop_thread = threading.Thread(target=self.__init_window)
         self.__loop_thread.start()
-        self.__pressed = set()
         while not self.__done:
-            time.sleep(0.1)
+            time.sleep(1e-5)
 
     def __init_window(self):
         self.__root = tkinter.Tk()
@@ -32,7 +33,7 @@ class TKwindow(GUIwindow):
                                        height=self.__height, highlightthickness=0)
         self.__canvas.place(x=0, y=0)
 
-        self.__key_tracker = KeyTracker(None)
+        self.__key_tracker = KeyTracker(self.__key_handler)
         self.__root.bind('<Key>', self.__key_tracker.press)
         self.__root.bind('<KeyRelease>', self.__key_tracker.release)
         self.__root.bind('<Button>', self.__on_mouse_press)
@@ -59,7 +60,6 @@ class TKwindow(GUIwindow):
 
     def key_hook(self, callback):
         self.__key_callback = callback
-        self.__key_tracker.callback = callback
 
     def draw(self, image):
         assert image.shape == (self.__height, self.__width, 3)
@@ -94,13 +94,22 @@ class TKwindow(GUIwindow):
     def fps(self, flag):
         self.__show_fps = bool(flag)
 
+    def __key_handler(self, keycode, pressed):
+        self.__key_callback(self.__winid, keycode, pressed)
+
     def __on_mouse_press(self, event):
         if self.__key_callback is not None:
-            self.__key_callback(event.num, True)
+            self.__key_callback(self.__winid, event.num, True)
 
     def __on_mouse_release(self, event):
         if self.__key_callback is not None:
-            self.__key_callback(event.num, False)
+            self.__key_callback(self.__winid, event.num, False)
+
+
+keycodes.KEY_W = 87
+keycodes.KEY_A = 65
+keycodes.KEY_S = 83
+keycodes.KEY_D = 68
 
 
 if __name__ == '__main__':

@@ -20,7 +20,7 @@ class PILwindow(GUIwindow):
         self.__winid = winid
         self.__callback = None
         self.__pressed = False
-        self.__tracker = Tracker(self.__key_callback)
+        self.__tracker = Tracker(self.__key_handler)
         self.__listener_thread = threading.Thread(target=self.__key_listener)
         self.__listener_thread.start()
 
@@ -40,7 +40,7 @@ class PILwindow(GUIwindow):
     def key_hook(self, callback):
         self.__callback = callback
 
-    def __key_callback(self, key, pressed):
+    def __key_handler(self, key, pressed):
         self.__pressed = True
         if self.__callback is not None:
             #print(key, pressed)
@@ -59,4 +59,3 @@ class PILwindow(GUIwindow):
         while True:
             key = getch()
             self.__tracker.press(ord(key))
-

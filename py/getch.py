@@ -4,13 +4,8 @@ import time
 import threading
 from collections import defaultdict
 
-if platform.system() == 'Windows':
-    raise NotImplementedError
-else:
-    import sys, termios, tty
 
-class Getch():
-
+class _LinuxGetch():
     def __init__(self, raw=False):
         self.fd = sys.stdin.fileno()
         self.orig = termios.tcgetattr(self.fd)
@@ -23,9 +18,22 @@ class Getch():
         termios.tcsetattr(self.fd, termios.TCSAFLUSH, self.orig)
 
     def __call__(self):
-        return sys.stdin.read(1)
+        return ord(sys.stdin.read(1))
 
-getch = Getch()
+class _WindowsGetch():
+    def __init__(self, raw=False):
+        pass
+
+    def __call__(self):
+        return ord(msvcrt.getch())
+
+
+if platform.system() == 'Windows':
+    import msvcrt
+    getch = _WindowsGetch()
+else:
+    import sys, termios, tty
+    getch = _LinuxGetch()
 
 class Tracker():
 
