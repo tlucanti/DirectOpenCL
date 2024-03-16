@@ -7,10 +7,12 @@
 #include <time.h>
 #include <unistd.h>
 
+typedef unsigned int col_t;
+
 struct canvas {
 	int width;
 	int height;
-	unsigned char *buf;
+	col_t *buf;
 };
 
 static int sixel_write(char *data, int size, void *out)
@@ -18,14 +20,14 @@ static int sixel_write(char *data, int size, void *out)
 	return fwrite(data, 1, size, (FILE *)out);
 }
 
-void set_pixel(struct canvas *canvas, int x, int y, unsigned char color)
+void set_pixel(struct canvas *canvas, int x, int y, col_t color)
 {
 	canvas->buf[canvas->width * y + x] = color;
 }
 
 #define square(x) ((x) * (x))
 
-void draw_circle(struct canvas *canvas, int x, int y, int radius, unsigned char color)
+void draw_circle(struct canvas *canvas, int x, int y, int radius, col_t color)
 {
 	for (int yy = y - radius / 2; yy < y + radius / 2; yy++) {
 		for (int xx = x - radius / 2; xx < x + radius / 2; xx++) {
@@ -36,7 +38,7 @@ void draw_circle(struct canvas *canvas, int x, int y, int radius, unsigned char 
 	}
 }
 
-void draw_borders(struct canvas *canvas, unsigned char color)
+void draw_borders(struct canvas *canvas, col_t color)
 {
 	for (int x = 0; x < canvas->width; x++) {
 		for (int y = 0; y < canvas->height; y++) {
@@ -65,9 +67,9 @@ int main()
 	struct canvas canvas;
 	SIXELSTATUS status;
 
-	canvas.width = 400;
-	canvas.height = 300;
-	canvas.buf = malloc(sizeof(unsigned char) * canvas.width * canvas.height);
+	canvas.width = 1200;
+	canvas.height = 200;
+	canvas.buf = malloc(sizeof(int) * canvas.width * canvas.height);
 	if (canvas.buf == NULL) {
 		printf("canvas alloc fail\n");
 		goto end;
@@ -79,28 +81,42 @@ int main()
 		goto end;
 	}
 
-	dither = sixel_dither_get(SIXEL_BUILTIN_G8);
-	sixel_dither_set_pixelformat(dither, SIXEL_PIXELFORMAT_G8);
+	sixel_dither_new(&dither, SIXEL_PALETTE_MAX, NULL);
 
-	int x = 100, y = 100;
-	while (true) {
-		//draw_circle(&canvas, x, y, 40, 0x00);
-		x = rand() % 200 + 40;
-		y = rand() % 200 + 40;
-		draw_circle(&canvas, x, y, 40, rand() % 256);
+	int y = 50;
+	int col = 0;
+
+next:
+	for (int x = 0; x < 256; x++) {
+		draw_circle(&canvas, x * 4, y, 40, x << col);
+
 
 		printf("\e[0;0H");
 		fflush(stdout);
-		draw_borders(&canvas, 0xff);
+		draw_borders(&canvas, 0xffffff);
 
-		status = sixel_encode(canvas.buf, canvas.width, canvas.height, 0, dither, output);
+		sixel_dither_initialize(dither, canvas.buf, canvas.width, canvas.height,
+					SIXEL_PIXELFORMAT_RGBA8888,
+					SIXEL_LARGE_AUTO,
+					SIXEL_REP_AUTO,
+					SIXEL_QUALITY_AUTO);
+		status = sixel_encode((void *)canvas.buf, canvas.width, canvas.height, 0, dither, output);
 		if (SIXEL_FAILED(status)) {
 			printf("sixel_encode() fail\n");
 			goto end;
 		}
 
 		printf("fps: %f\n", get_fps());
-		usleep(10000);
+		usleep(5000);
+	}
+	if (col == 0) {
+		col = 8;
+		y = 100;
+		goto next;
+	} else if (col == 8) {
+		col = 16;
+		y = 150;
+		goto next;
 	}
 
 end:
