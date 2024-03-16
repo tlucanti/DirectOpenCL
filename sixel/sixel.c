@@ -1,6 +1,10 @@
 
 #include <sixel.h>
 
+#include <termios.h>
+
+#include <string.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -43,7 +47,7 @@ void draw_borders(struct canvas *canvas, col_t color)
 	for (int x = 0; x < canvas->width; x++) {
 		for (int y = 0; y < canvas->height; y++) {
 			if (x == 0 || x == canvas->width - 1 ||
-			    y == 0 || y == canvas->height - 1) {
+				y == 0 || y == canvas->height - 1) {
 				set_pixel(canvas, x, y, color);
 			}
 		}
@@ -60,7 +64,7 @@ static float get_fps(void)
 	return 1.f / ((ts.tv_sec - prev_s) + (ts.tv_nsec - prev_ns) * 1e-9f);
 }
 
-int main()
+void draw()
 {
 	sixel_output_t *output;
 	sixel_dither_t *dither;
@@ -72,13 +76,13 @@ int main()
 	canvas.buf = malloc(sizeof(int) * canvas.width * canvas.height);
 	if (canvas.buf == NULL) {
 		printf("canvas alloc fail\n");
-		goto end;
+		return;
 	}
 
 	status = sixel_output_new(&output, sixel_write, stdout, NULL);
 	if (SIXEL_FAILED(status)) {
 		printf("sixel_output_new() fail\n");
-		goto end;
+		return;
 	}
 
 	status = sixel_dither_new(&dither, SIXEL_PALETTE_MAX, NULL);
@@ -107,7 +111,7 @@ next:
 		status = sixel_encode((void *)canvas.buf, canvas.width, canvas.height, 0, dither, output);
 		if (SIXEL_FAILED(status)) {
 			printf("sixel_encode() fail\n");
-			goto end;
+			return;
 		}
 
 		printf("fps: %f\n", get_fps());
@@ -122,7 +126,72 @@ next:
 		y = 150;
 		goto next;
 	}
+}
 
-end:
-	return 0;
+
+struct termios term_info;
+
+void finalize(int sig)
+{
+	(void)sig;
+	int err;
+
+		err = tcsetattr(STDIN_FILENO, TCSANOW, &term_info);
+		if (err != 0) {
+			perror("tcsetattr");
+		abort();
+		}
+
+	printf("\e[?1000l");
+	fflush(stdout);
+	printf("\ndone\n");
+	exit(0);
+}
+
+void tty_raw()
+{
+	struct termios raw_mode;
+	int err;
+	err = 0;
+
+	// Get the current terminal characteristics.
+	err = tcgetattr(STDIN_FILENO, &term_info);
+	if (err != 0) {
+		perror("tcgetattr");
+		finalize(0);
+	}
+
+	// Copy what we got, so we can change it.
+	memcpy(&raw_mode, &term_info, sizeof(struct termios));
+
+	// Modify the terminal characteristics to 'raw mode'.
+	cfmakeraw(&raw_mode);
+
+	// Set the terminal to raw mode.
+	err = tcsetattr(STDIN_FILENO, TCSANOW, &raw_mode);
+	if (err != 0) {
+		perror("tcsetattr");
+	finalize(0);
+	}
+}
+
+int main()
+{
+	signal(SIGINT, finalize);
+	signal(SIGTERM, finalize);
+
+	printf("\e[?1003h\e[?1015h\e[?1006h");
+	tty_raw();
+	fflush(stdout);
+
+	while (true) {
+		char c;
+
+		read(STDIN_FILENO, &c, 1);
+		printf("got %d\r\n", c);
+		if (c == 'x') {
+			finalize(0);
+		}
+		//printf("%d\n", c);
+	}
 }
