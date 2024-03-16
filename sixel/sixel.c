@@ -81,25 +81,29 @@ int main()
 		goto end;
 	}
 
-	sixel_dither_new(&dither, SIXEL_PALETTE_MAX, NULL);
+	status = sixel_dither_new(&dither, SIXEL_PALETTE_MAX, NULL);
+	if (SIXEL_FAILED(status)) {
+		printf("sixel_dither_new() failed\n");
+	}
+
+	sixel_output_set_encode_policy(output, SIXEL_ENCODEPOLICY_FAST);
 
 	int y = 50;
 	int col = 0;
 
 next:
-	for (int x = 0; x < 256; x++) {
+	for (int x = 0; x < 256; x += 4) {
 		draw_circle(&canvas, x * 4, y, 40, x << col);
-
+		draw_borders(&canvas, x << col);
 
 		printf("\e[0;0H");
 		fflush(stdout);
-		draw_borders(&canvas, 0xffffff);
 
-		sixel_dither_initialize(dither, canvas.buf, canvas.width, canvas.height,
+		sixel_dither_initialize(dither, (void *)canvas.buf, canvas.width, canvas.height,
 					SIXEL_PIXELFORMAT_RGBA8888,
 					SIXEL_LARGE_AUTO,
 					SIXEL_REP_AUTO,
-					SIXEL_QUALITY_AUTO);
+					SIXEL_QUALITY_FULL);
 		status = sixel_encode((void *)canvas.buf, canvas.width, canvas.height, 0, dither, output);
 		if (SIXEL_FAILED(status)) {
 			printf("sixel_encode() fail\n");
@@ -107,7 +111,7 @@ next:
 		}
 
 		printf("fps: %f\n", get_fps());
-		usleep(5000);
+		//usleep(10000);
 	}
 	if (col == 0) {
 		col = 8;
