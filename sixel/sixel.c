@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <time.h>
+#include <unistd.h>
 
 struct canvas {
 	int width;
@@ -33,6 +36,27 @@ void draw_circle(struct canvas *canvas, int x, int y, int radius, unsigned char 
 	}
 }
 
+void draw_borders(struct canvas *canvas, unsigned char color)
+{
+	for (int x = 0; x < canvas->width; x++) {
+		for (int y = 0; y < canvas->height; y++) {
+			if (x == 0 || x == canvas->width - 1 ||
+			    y == 0 || y == canvas->height - 1) {
+				set_pixel(canvas, x, y, color);
+			}
+		}
+	}
+}
+
+static float get_fps(void)
+{
+	static struct timespec ts = {};
+	time_t prev_s = ts.tv_sec;
+	long prev_ns = ts.tv_nsec;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return 1.f / ((ts.tv_sec - prev_s) + (ts.tv_nsec - prev_ns) * 1e-9f);
+}
 
 int main()
 {
@@ -58,12 +82,25 @@ int main()
 	dither = sixel_dither_get(SIXEL_BUILTIN_G8);
 	sixel_dither_set_pixelformat(dither, SIXEL_PIXELFORMAT_G8);
 
-	draw_circle(&canvas, 100, 100, 40, 0xff);
+	int x = 100, y = 100;
+	while (true) {
+		//draw_circle(&canvas, x, y, 40, 0x00);
+		x = rand() % 200 + 40;
+		y = rand() % 200 + 40;
+		draw_circle(&canvas, x, y, 40, rand() % 256);
 
-	status = sixel_encode(canvas.buf, canvas.width, canvas.height, 0, dither, output);
-	if (SIXEL_FAILED(status)) {
-		printf("sixel_encode() fail\n");
-		goto end;
+		printf("\e[0;0H");
+		fflush(stdout);
+		draw_borders(&canvas, 0xff);
+
+		status = sixel_encode(canvas.buf, canvas.width, canvas.height, 0, dither, output);
+		if (SIXEL_FAILED(status)) {
+			printf("sixel_encode() fail\n");
+			goto end;
+		}
+
+		printf("fps: %f\n", get_fps());
+		usleep(10000);
 	}
 
 end:
