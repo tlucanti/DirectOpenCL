@@ -3,6 +3,7 @@
 
 #include <termios.h>
 
+#include <ctype.h>
 #include <string.h>
 #include <signal.h>
 #include <stdio.h>
@@ -136,11 +137,11 @@ void finalize(int sig)
 	(void)sig;
 	int err;
 
-		err = tcsetattr(STDIN_FILENO, TCSANOW, &term_info);
-		if (err != 0) {
-			perror("tcsetattr");
-		abort();
-		}
+	//err = tcsetattr(STDIN_FILENO, TCSANOW, &term_info);
+	//if (err != 0) {
+	//	perror("tcsetattr");
+	//	abort();
+	//}
 
 	printf("\e[?1000l");
 	fflush(stdout);
@@ -175,20 +176,69 @@ void tty_raw()
 	}
 }
 
+void key_reader(void)
+{
+	while (true) {
+		int button, x, y;
+		char c, type;
+		int success;
+
+		success = scanf("%c", &c);
+		if (success == 0) {
+			printf("cannot read from stdin\n");
+			finalize(0);
+		}
+
+		if (c == '\n') {
+		} else if (c == '\e') {
+			success = scanf("[<%d;%d;%d%c", &button, &x, &y, &type);
+			if (success == 4) {
+				if (button == 35) {
+					printf("mouse move to");
+				} else if (button == 65) {
+					printf("scroll down at");
+				} else if (button == 64) {
+					printf("scroll up at");
+				} else if (button <= 7 && type == 'M') {
+					printf("button %d pressed", button);
+				} else if (button <= 7 && type == 'm') {
+					printf("button %d released at", button);
+				} else {
+					printf("UNKNOWN EVENT %d %c", button, type);
+				}
+				printf(" x=%d y=%d\n", x, y);
+			}
+		} else if (c == 'x') {
+			finalize(0);
+		} else {
+			printf("pressed %d (%c)\n", c, c);
+		}
+	}
+}
+
 int main()
 {
 	signal(SIGINT, finalize);
 	signal(SIGTERM, finalize);
 
 	printf("\e[?1003h\e[?1015h\e[?1006h");
-	tty_raw();
+	//tty_raw();
 	fflush(stdout);
+
+	key_reader();
+	return 0;
 
 	while (true) {
 		char c;
 
 		read(STDIN_FILENO, &c, 1);
-		printf("got %d\r\n", c);
+		printf("got %d", c);
+		if (isprint(c)) {
+			printf(" (%c)", c);
+		}
+		printf("\r\n");
+		fflush(stdout);
+
 		if (c == 'x') {
 			finalize(0);
 		}
