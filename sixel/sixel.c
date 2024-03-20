@@ -4,6 +4,7 @@
 #include <stdguilib.h>
 
 #include <termios.h>
+#include <pthread.h>
 
 #include <ctype.h>
 #include <string.h>
@@ -22,7 +23,8 @@
 #define ESCAPE_ENABLE_LOCATOR "\033[?1003h\033[?1015h\033[?1006h"
 #define ESCAPE_DISABLE_LOCATOR "\e[?1000l"
 
-typedef unsigned int col_t;
+int gx, gy;
+
 static struct termios term_info;
 
 static void locator_enable(bool enable)
@@ -68,12 +70,78 @@ static void tty_raw(bool enable)
 static int sixel_write(char *data, int size, void *arg)
 {
 	(void)arg;
-	return fwrite(data, 1, size, stdout);
+	fwrite(data, 1, size, stdout);
+	fflush(stdout);
 	return 0;
+}
+
+__attribute__((__noreturn__))
+static void *key_reader(void *arg)
+{
+	(void)arg;
+
+	while (true) {
+		int button, x, y;
+		char c, type;
+		int success;
+
+		success = scanf("%c", &c);
+		if (success == 0) {
+			printf("cannot read from stdin\n");
+			abort();
+		}
+
+		if (!CONFIG_SIXEL_RAW_MODE && c == '\n') {
+			continue;
+		}
+
+		if (c == '\e') {
+			success = scanf("[<%d;%d;%d%c", &button, &x, &y, &type);
+			if (success == 4) {
+				if (button == 35) {
+					printf("mouse move to");
+				} else if (button == 65) {
+					printf("scroll down at");
+				} else if (button == 64) {
+					printf("scroll up at");
+				} else if (button <= 7 && type == 'M') {
+					printf("button %d pressed", button);
+				} else if (button <= 7 && type == 'm') {
+					printf("button %d released at", button);
+				} else {
+					printf("UNKNOWN EVENT %d %c", button, type);
+				}
+				printf(" x=%d y=%d\n", x, y);
+			}
+		} else if (c == 'x') {
+			gui_finalize();
+			exit(0);
+		} else {
+			printf("pressed %d (%c)\n", c, c);
+			switch (c) {
+			case 'a':
+				gx -= 10;
+				break;
+			case 'd':
+				gx += 10;
+				break;
+			case 'w':
+				gy -= 10;
+				break;
+			case 's':
+				gy += 10;
+				break;
+			}
+		}
+	}
 }
 
 void gui_bootstrap(void)
 {
+	pthread_t tid;
+
+	pthread_create(&tid, NULL, key_reader, NULL);
+
 	if (CONFIG_SIXEL_RAW_MODE) {
 		tty_init();
 		tty_raw(true);
@@ -144,6 +212,18 @@ void gui_set_pixel(struct gui_window *window, unsigned x, unsigned y, unsigned c
 	gui_set_pixel_raw(window, (unsigned long)y * window->__width + x, color);
 }
 
+int gui_set_pixel_safe(struct gui_window *window, unsigned x, unsigned y, unsigned color)
+{
+	unsigned long i = (unsigned long)y * window->__width + x;
+
+	if (i < window->__length) {
+		gui_set_pixel_raw(window, i, color);
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
 void gui_set_pixel_raw(struct gui_window *window, unsigned long i, unsigned color)
 {
 	window->__raw_pixels[i] = color;
@@ -184,66 +264,35 @@ void gui_mouse(const struct gui_window *window, unsigned *x, unsigned *y)
 
 void gui_mouse_raw(const struct gui_window *window, unsigned long *i)
 {
+	(void)window, (void)i;
 	abort();
 }
 
 void gui_wfi(struct gui_window *window)
 {
-	abort();
-}
-
-static void key_reader(void)
-{
-	while (true) {
-		int button, x, y;
-		char c, type;
-		int success;
-
-		success = scanf("%c", &c);
-		if (success == 0) {
-			printf("cannot read from stdin\n");
-			abort();
-		}
-
-		if (c == '\n') {
-		} else if (c == '\e') {
-			success = scanf("[<%d;%d;%d%c", &button, &x, &y, &type);
-			if (success == 4) {
-				if (button == 35) {
-					printf("mouse move to");
-				} else if (button == 65) {
-					printf("scroll down at");
-				} else if (button == 64) {
-					printf("scroll up at");
-				} else if (button <= 7 && type == 'M') {
-					printf("button %d pressed", button);
-				} else if (button <= 7 && type == 'm') {
-					printf("button %d released at", button);
-				} else {
-					printf("UNKNOWN EVENT %d %c", button, type);
-				}
-				printf(" x=%d y=%d\n", x, y);
-			}
-		} else if (c == 'x') {
-			gui_finalize();
-			exit(0);
-		} else {
-			printf("pressed %d (%c)\n", c, c);
-		}
-	}
+	(void)window;
+	usleep(100000);
+	return;
 }
 
 int main()
 {
 	struct gui_window window;
 	const int width = 400, height = 300;
+	int x = 0, y = 0;
 
 	gui_bootstrap();
 	gui_create(&window, width, height);
 
-	gui_draw_circle(&window, 100, 100, 40, COLOR_WHITE);
-	gui_draw(&window);
-
-	key_reader();
+	gx = width / 2;
+	gy = height / 2;
+	while (true) {
+		gui_draw_circle(&window, x, y, 20, COLOR_BLACK);
+		x = gx;
+		y = gy;
+		gui_draw_circle(&window, x, y, 20, COLOR_WHITE);
+		gui_draw(&window);
+		gui_wfi(&window);
+	}
 }
 

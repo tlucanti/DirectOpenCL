@@ -17,7 +17,7 @@ void gui_draw_circle(struct gui_window *window, unsigned xu, unsigned yu, unsign
 	for (int yy = y - radius / 2; yy < (int)(y + radius / 2); yy++) {
 		for (int xx = x - radius / 2; xx < (int)(x + radius / 2); xx++) {
 			if (square(xx - x) + square(yy - y) <= radius) {
-				gui_set_pixel(window, xx, yy, color);
+				gui_set_pixel_safe(window, xx, yy, color);
 			}
 		}
 	}
