@@ -9,6 +9,7 @@ struct gui_window;
 typedef void (*key_hook_t)(struct gui_window *window, int keycode, bool pressed);
 
 void gui_bootstrap(void);
+void gui_finalize(void);
 void gui_create(struct gui_window *window, unsigned int width, unsigned int height);
 void gui_destroy(struct gui_window *window);
 
@@ -18,7 +19,7 @@ unsigned int gui_height(const struct gui_window *window);
 void gui_set_pixel(struct gui_window *window, unsigned x, unsigned y, unsigned color);
 void gui_set_pixel_raw(struct gui_window *window, unsigned long i, unsigned color);
 int gui_set_pixel_safe(struct gui_window *window, unsigned x, unsigned y, unsigned color);
-int gui_set_pixel_raw_safe(struct gui_window *window, unsigned long i, unsigned color);
+//int gui_set_pixel_raw_safe(struct gui_window *window, unsigned long i, unsigned color);
 void gui_draw(const struct gui_window *window);
 
 void gui_key_hook(struct gui_window *window, key_hook_t hook);
@@ -37,6 +38,7 @@ void gui_wfi(struct gui_window *window);
 #define COLOR_GREEN	0x00FF00
 #define COLOR_BLUE	0x0000FF
 
+#ifdef CONFIG_PY_GUI_WINDOW
 struct gui_window {
 	void *__PY_window;
 	unsigned int *__raw_pixels;
@@ -44,5 +46,20 @@ struct gui_window {
 	unsigned int __height;
 	unsigned long __length;
 };
+#else
+#include <sixel.h>
+
+struct gui_window {
+	unsigned int __width;
+	unsigned int __height;
+	unsigned int __length;
+	key_hook_t __callback;
+	int __mouse_x;
+	int __mouse_y;
+	unsigned int *__raw_pixels;
+	sixel_output_t *__output;
+	sixel_dither_t *__dither;
+};
+#endif
 
 #endif /* GUILIB_BACKEND_H */
