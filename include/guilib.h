@@ -23,8 +23,7 @@ int gui_set_pixel_safe(struct gui_window *window, unsigned x, unsigned y, unsign
 void gui_draw(const struct gui_window *window);
 
 void gui_key_hook(struct gui_window *window, key_hook_t hook);
-void gui_mouse(const struct gui_window *window, unsigned *x, unsigned *y);
-void gui_mouse_raw(const struct gui_window *window, unsigned long *i);
+void gui_mouse(const struct gui_window *window, int *x, int *y);
 void gui_wfi(struct gui_window *window);
 
 #define KEY_W 119u

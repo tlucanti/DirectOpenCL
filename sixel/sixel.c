@@ -6,9 +6,7 @@
 #include <termios.h>
 #include <pthread.h>
 
-#include <ctype.h>
 #include <string.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -16,16 +14,27 @@
 #include <unistd.h>
 
 #ifndef CONFIG_SIXEL_RAW_MODE
-# define CONFIG_SIXEL_RAW_MODE false
+# define CONFIG_SIXEL_RAW_MODE true
 #endif
 
 #define ESCAPE_CLEAR_SCREEN "\033[0;0H"
 #define ESCAPE_ENABLE_LOCATOR "\033[?1003h\033[?1015h\033[?1006h"
 #define ESCAPE_DISABLE_LOCATOR "\e[?1000l"
 
-int gx, gy;
+#define DELTA 0.1f
 
-static struct termios term_info;
+static struct termios g_term_info;
+static int g_mouse_x = 0;
+static int g_mouse_y = 0;
+key_hook_t g_callback = NULL;
+struct gui_window *g_window = NULL;
+
+struct key_metadata {
+	double last_press_time;
+	int keycode;
+	pthread_spinlock_t lock;
+	bool released;
+};
 
 static void locator_enable(bool enable)
 {
@@ -39,7 +48,7 @@ static void locator_enable(bool enable)
 
 static void tty_init(void)
 {
-	if (tcgetattr(STDIN_FILENO, &term_info) != 0) {
+	if (tcgetattr(STDIN_FILENO, &g_term_info) != 0) {
 		perror("tty_init() failed: ");
 		abort();
 	}
@@ -50,14 +59,14 @@ static void tty_raw(bool enable)
 	struct termios raw_mode;
 
 	if (!enable) {
-		if (tcsetattr(STDIN_FILENO, TCSANOW, &term_info) != 0) {
+		if (tcsetattr(STDIN_FILENO, TCSANOW, &g_term_info) != 0) {
 			perror("tty restore failed: ");
 			abort();
 		}
 		return;
 	}
 
-	memcpy(&raw_mode, &term_info, sizeof(struct termios));
+	memcpy(&raw_mode, &g_term_info, sizeof(struct termios));
 	cfmakeraw(&raw_mode);
 
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &raw_mode) != 0) {
@@ -75,19 +84,80 @@ static int sixel_write(char *data, int size, void *arg)
 	return 0;
 }
 
+static double time_now()
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (double)ts.tv_sec + (double)ts.tv_nsec * 1e-9f;
+}
+
+static void *release_checker(void *arg)
+{
+	struct key_metadata *meta = arg;
+
+	usleep(DELTA * 1e6f);
+	pthread_spin_lock(&meta->lock);
+	if (time_now() - meta->last_press_time > DELTA && !meta->released) {
+		meta->released = true;
+		pthread_spin_unlock(&meta->lock);
+		g_callback(g_window, meta->keycode, false);
+	}
+	pthread_spin_unlock(&meta->lock);
+	return NULL;
+}
+
+static void key_tracker(int keycode)
+{
+	static struct key_metadata meta[256] = {};
+	static bool init = false;
+	pthread_t tid;
+	double time;
+	bool do_callback;
+
+	if (!init) {
+		init = true;
+		for (int i = 0; i < 256; i++) {
+			meta[i].released = false;
+			meta[i].last_press_time = 0;
+			meta[i].keycode = i;
+			pthread_spin_init(&meta[i].lock, false);
+		}
+	}
+
+	if (keycode >= 256) {
+		printf("\nkey overflow\n");
+		abort();
+	}
+
+	time = time_now();
+	do_callback = (time - meta[keycode].last_press_time > DELTA);
+	meta[keycode].last_press_time = time;
+	//printf("last_press_time %f\r\n", time);
+	pthread_create(&tid, NULL, release_checker, &meta[keycode]);
+	pthread_detach(tid);
+
+	if (do_callback) {
+		pthread_spin_lock(&meta[keycode].lock);
+		meta[keycode].released = false;
+		pthread_spin_unlock(&meta[keycode].lock);
+		g_callback(g_window, keycode, true);
+	}
+}
+
 __attribute__((__noreturn__))
 static void *key_reader(void *arg)
 {
+	int button, x, y;
+	char c, type;
+	int success;
+
 	(void)arg;
 
 	while (true) {
-		int button, x, y;
-		char c, type;
-		int success;
-
 		success = scanf("%c", &c);
 		if (success == 0) {
-			printf("cannot read from stdin\n");
+			printf("\ncannot read from stdin\n");
 			abort();
 		}
 
@@ -99,38 +169,34 @@ static void *key_reader(void *arg)
 			success = scanf("[<%d;%d;%d%c", &button, &x, &y, &type);
 			if (success == 4) {
 				if (button == 35) {
-					printf("mouse move to");
+					//printf("mouse move to");
 				} else if (button == 65) {
-					printf("scroll down at");
+					//printf("scroll down at");
 				} else if (button == 64) {
-					printf("scroll up at");
+					//printf("scroll up at");
 				} else if (button <= 7 && type == 'M') {
-					printf("button %d pressed", button);
+					//printf("button %d pressed", button);
+					if (g_callback != NULL) {
+						g_callback(g_window, button, true);
+					}
 				} else if (button <= 7 && type == 'm') {
-					printf("button %d released at", button);
+					//printf("button %d released at", button);
+					if (g_callback != NULL) {
+						g_callback(g_window, button, false);
+					}
 				} else {
-					printf("UNKNOWN EVENT %d %c", button, type);
+					//printf("UNKNOWN EVENT %d %c", button, type);
 				}
-				printf(" x=%d y=%d\n", x, y);
+				//printf(" x=%d y=%d\n", x, y);
+				g_mouse_x = x;
+				g_mouse_y = y;
 			}
 		} else if (c == 'x') {
 			gui_finalize();
 			exit(0);
 		} else {
-			printf("pressed %d (%c)\n", c, c);
-			switch (c) {
-			case 'a':
-				gx -= 10;
-				break;
-			case 'd':
-				gx += 10;
-				break;
-			case 'w':
-				gy -= 10;
-				break;
-			case 's':
-				gy += 10;
-				break;
+			if (g_callback != NULL) {
+				key_tracker(c);
 			}
 		}
 	}
@@ -164,10 +230,8 @@ void gui_create(struct gui_window *window, unsigned int width, unsigned int heig
 	window->__width = width;
 	window->__height = height;
 	window->__length = width * height;
-	window->__callback = NULL;
-	window->__mouse_x = 0;
-	window->__mouse_y = 0;
 	window->__raw_pixels = malloc(sizeof(unsigned int) * window->__length);
+	g_window = window;
 
 	if (window->__raw_pixels == NULL) {
 		fprintf(stderr, "window buffer alloc failed\n");
@@ -253,46 +317,65 @@ void gui_draw(const struct gui_window *window)
 
 void gui_key_hook(struct gui_window *window, key_hook_t hook)
 {
-	window->__callback = hook;
+	(void)window;
+	g_callback = hook;
 }
 
-void gui_mouse(const struct gui_window *window, unsigned *x, unsigned *y)
+void gui_mouse(const struct gui_window *window, int *x, int *y)
 {
-	*x = window->__mouse_x;
-	*y = window->__mouse_y;
-}
-
-void gui_mouse_raw(const struct gui_window *window, unsigned long *i)
-{
-	(void)window, (void)i;
-	abort();
+	(void)window;
+	*x = g_mouse_x;
+	*y = g_mouse_y;
 }
 
 void gui_wfi(struct gui_window *window)
 {
 	(void)window;
-	usleep(100000);
+	//usleep(100000);
 	return;
+}
+
+
+static int gx, gy;
+static void callback(struct gui_window *window, int keycode, bool pressed)
+{
+	(void)window;
+	if (pressed) {
+		printf("pressed %d", keycode);
+	} else {
+		printf("released %d", keycode);
+	}
+	if (keycode <= 7) {
+		int x, y;
+		gui_mouse(window, &x, &y);
+		printf(" at (%d, %d)", x, y);
+	}
+	printf("\r\n");
 }
 
 int main()
 {
 	struct gui_window window;
 	const int width = 400, height = 300;
-	int x = 0, y = 0;
+	//int x = 0, y = 0;
 
 	gui_bootstrap();
 	gui_create(&window, width, height);
+	gui_key_hook(&window, callback);
 
 	gx = width / 2;
 	gy = height / 2;
 	while (true) {
-		gui_draw_circle(&window, x, y, 20, COLOR_BLACK);
-		x = gx;
-		y = gy;
-		gui_draw_circle(&window, x, y, 20, COLOR_WHITE);
-		gui_draw(&window);
 		gui_wfi(&window);
 	}
+
+	//while (true) {
+	//	gui_draw_circle(&window, x, y, 20, COLOR_BLACK);
+	//	x = gx;
+	//	y = gy;
+	//	gui_draw_circle(&window, x, y, 20, COLOR_WHITE);
+	//	gui_draw(&window);
+	//	gui_wfi(&window);
+	//}
 }
 
