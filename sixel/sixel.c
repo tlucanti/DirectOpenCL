@@ -18,7 +18,7 @@
 #endif
 
 #define ESCAPE_CLEAR_SCREEN "\033[0;0H"
-#define ESCAPE_ENABLE_LOCATOR "\033[?1003h\033[?1015h\033[?1006h"
+#define ESCAPE_ENABLE_LOCATOR "\033[?1003h" "\033[?1015h" "\033[?1006h" "\033[?1016h"
 #define ESCAPE_DISABLE_LOCATOR "\e[?1000l"
 
 #define DELTA 0.1f
@@ -331,33 +331,46 @@ void gui_mouse(const struct gui_window *window, int *x, int *y)
 void gui_wfi(struct gui_window *window)
 {
 	(void)window;
-	//usleep(100000);
+	usleep(100000);
 	return;
 }
 
 
 static int gx, gy;
+static int dx = 0, dy = 0;
+static bool mouse1;
+
 static void callback(struct gui_window *window, int keycode, bool pressed)
 {
+	const int step = pressed ? 10 : -10;
 	(void)window;
-	if (pressed) {
-		printf("pressed %d", keycode);
-	} else {
-		printf("released %d", keycode);
+
+	switch (keycode) {
+		case 'd':
+			dx += step;
+			break;
+		case 'a':
+			dx -= step;
+			break;
+		case 'w':
+			dy -= step;
+			break;
+		case 's':
+			dy += step;
+			break;
+		case MOUSE_LEFT:
+			mouse1 = pressed;
+			break;
+		default:
+			printf("\r\n keycode %d, flag %d\r\n", keycode, (int)pressed);
 	}
-	if (keycode <= 7) {
-		int x, y;
-		gui_mouse(window, &x, &y);
-		printf(" at (%d, %d)", x, y);
-	}
-	printf("\r\n");
 }
 
 int main()
 {
 	struct gui_window window;
 	const int width = 400, height = 300;
-	//int x = 0, y = 0;
+	int mx1, my1, mx2, my2;
 
 	gui_bootstrap();
 	gui_create(&window, width, height);
@@ -365,17 +378,22 @@ int main()
 
 	gx = width / 2;
 	gy = height / 2;
+	gui_mouse(&window, &mx1, &my1);
 	while (true) {
+		gui_draw_circle(&window, gx, gy, 20, COLOR_BLACK);
+		gx += dx;
+		gy += dy;
+		gui_draw_circle(&window, gx, gy, 20, COLOR_WHITE);
+
+		gui_mouse(&window, &mx2, &my2);
+		if (mouse1) {
+			gui_draw_line(&window, mx1, my1, mx2, my2, COLOR_BLUE);
+		}
+		mx1 = mx2;
+		my1 = my2;
+
+		gui_draw(&window);
 		gui_wfi(&window);
 	}
-
-	//while (true) {
-	//	gui_draw_circle(&window, x, y, 20, COLOR_BLACK);
-	//	x = gx;
-	//	y = gy;
-	//	gui_draw_circle(&window, x, y, 20, COLOR_WHITE);
-	//	gui_draw(&window);
-	//	gui_wfi(&window);
-	//}
 }
 

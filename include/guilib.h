@@ -26,10 +26,14 @@ void gui_key_hook(struct gui_window *window, key_hook_t hook);
 void gui_mouse(const struct gui_window *window, int *x, int *y);
 void gui_wfi(struct gui_window *window);
 
-#define KEY_W 119u
-#define KEY_A 97u
-#define KEY_S 115u
-#define KEY_D 100u
+#define KEY_W 'w'
+#define KEY_A 'a'
+#define KEY_S 's'
+#define KEY_D 'd'
+
+#define MOUSE_LEFT 0
+#define MOUSE_RIGHT 1
+#define MOUSE_MIDDLE 2
 
 #define COLOR_BLACK	0x000000
 #define COLOR_WHITE	0xFFFFFF

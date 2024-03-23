@@ -8,6 +8,11 @@ static inline long square(long x)
 	return x * x;
 }
 
+static inline int abs(int x)
+{
+	return x > 0 ? x : -x;
+}
+
 void gui_draw_circle(struct gui_window *window, unsigned xu, unsigned yu, unsigned ru, unsigned color)
 {
 	int x = xu;
@@ -31,6 +36,44 @@ void gui_draw_borders(struct gui_window *window, unsigned width, unsigned color)
 			    y < width || y >= gui_height(window) - width) {
 				gui_set_pixel(window, x, y, color);
 			}
+		}
+	}
+}
+
+void gui_draw_line(struct gui_window *window, unsigned x0, unsigned y0,
+		   unsigned x1, unsigned y1, unsigned color)
+{
+	int dx, dy;
+	int sx, sy;
+	int err;
+
+	dx = abs(x1 - x0);
+	dy = -abs(y1 - y0);
+
+	sx = x0 < x1 ? 1 : -1;
+	sy = y0 < y1 ? 1 : -1;
+	err = dx + dy;
+
+	while (true) {
+		gui_set_pixel_safe(window, x0, y0, color);
+
+		if (x0 == x1 && y0 == y1) {
+			break;
+		}
+
+		if (err * 2 > dy) {
+			if (x0 == x1) {
+				break;
+			}
+			err += dy;
+			x0 += sx;
+		}
+		if (err * 2 <= dx) {
+			if (y0 == y1) {
+				break;
+			}
+			err += dx;
+			y0 += sy;
 		}
 	}
 }
