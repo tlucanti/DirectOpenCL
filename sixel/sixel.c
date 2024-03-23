@@ -36,14 +36,18 @@ struct key_metadata {
 	bool released;
 };
 
+static void string_write(const char *s)
+{
+	write(STDOUT_FILENO, s, strlen(s));
+}
+
 static void locator_enable(bool enable)
 {
 	if (enable) {
-		printf(ESCAPE_ENABLE_LOCATOR);
+		string_write(ESCAPE_ENABLE_LOCATOR);
 	} else {
-		printf(ESCAPE_DISABLE_LOCATOR);
+		string_write(ESCAPE_DISABLE_LOCATOR);
 	}
-	fflush(stdout);
 }
 
 static void tty_init(void)
@@ -79,8 +83,8 @@ static void tty_raw(bool enable)
 static int sixel_write(char *data, int size, void *arg)
 {
 	(void)arg;
-	fwrite(data, 1, size, stdout);
-	fflush(stdout);
+	string_write(ESCAPE_CLEAR_SCREEN);
+	write(STDOUT_FILENO, data, size);
 	return 0;
 }
 
@@ -126,14 +130,13 @@ static void key_tracker(int keycode)
 	}
 
 	if (keycode >= 256) {
-		printf("\nkey overflow\n");
+		fprintf(stderr, "\nkey overflow\n");
 		abort();
 	}
 
 	time = time_now();
 	do_callback = (time - meta[keycode].last_press_time > DELTA);
 	meta[keycode].last_press_time = time;
-	//printf("last_press_time %f\r\n", time);
 	pthread_create(&tid, NULL, release_checker, &meta[keycode]);
 	pthread_detach(tid);
 
@@ -157,7 +160,7 @@ static void *key_reader(void *arg)
 	while (true) {
 		success = scanf("%c", &c);
 		if (success == 0) {
-			printf("\ncannot read from stdin\n");
+			fprintf(stderr, "\ncannot read from stdin\n");
 			abort();
 		}
 
@@ -169,25 +172,24 @@ static void *key_reader(void *arg)
 			success = scanf("[<%d;%d;%d%c", &button, &x, &y, &type);
 			if (success == 4) {
 				if (button == 35) {
-					//printf("mouse move to");
+					// mouse move
 				} else if (button == 65) {
-					//printf("scroll down at");
+					// scroll down
 				} else if (button == 64) {
-					//printf("scroll up at");
+					// scroll up
 				} else if (button <= 7 && type == 'M') {
-					//printf("button %d pressed", button);
+					// mouse button pressed
 					if (g_callback != NULL) {
 						g_callback(g_window, button, true);
 					}
 				} else if (button <= 7 && type == 'm') {
-					//printf("button %d released at", button);
+					//mose button released
 					if (g_callback != NULL) {
 						g_callback(g_window, button, false);
 					}
 				} else {
-					//printf("UNKNOWN EVENT %d %c", button, type);
+					// UNKNOWN EVENT
 				}
-				//printf(" x=%d y=%d\n", x, y);
 				g_mouse_x = x;
 				g_mouse_y = y;
 			}
@@ -297,9 +299,6 @@ void gui_draw(const struct gui_window *window)
 {
 	SIXELSTATUS status;
 
-	printf(ESCAPE_CLEAR_SCREEN);
-	fflush(stdout);
-
 	sixel_dither_initialize(window->__dither, (void *)window->__raw_pixels,
 				window->__width, window->__height,
 				SIXEL_PIXELFORMAT_RGBA8888, SIXEL_LARGE_AUTO,
@@ -361,15 +360,13 @@ static void callback(struct gui_window *window, int keycode, bool pressed)
 		case MOUSE_LEFT:
 			mouse1 = pressed;
 			break;
-		default:
-			printf("\r\n keycode %d, flag %d\r\n", keycode, (int)pressed);
 	}
 }
 
 int main()
 {
 	struct gui_window window;
-	const int width = 400, height = 300;
+	const int width = 800, height = 600;
 	int mx1, my1, mx2, my2;
 
 	gui_bootstrap();
@@ -380,6 +377,8 @@ int main()
 	gy = height / 2;
 	gui_mouse(&window, &mx1, &my1);
 	while (true) {
+		gui_draw_borders(&window, 2, COLOR_WHITE);
+
 		gui_draw_circle(&window, gx, gy, 20, COLOR_BLACK);
 		gx += dx;
 		gy += dy;
@@ -394,6 +393,8 @@ int main()
 
 		gui_draw(&window);
 		gui_wfi(&window);
+
+		printf("\r\nfps: %f\r\n", gui_get_fps());
 	}
 }
 
