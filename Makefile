@@ -16,15 +16,33 @@ py-tkinter: py-build
 py-pil: py-build
 	cd py && python3 frontend.py
 
-six:
+sixlib:
 	gcc \
 		-Wall -Wextra \
-		-O0 -g3 -fdiagnostics-color=always \
+		-O2 -fdiagnostics-color=always \
 		-I ../libsixel/include \
 		-I include \
-		-L ../libsixel/src/.libs/ \
 		sixel/sixel.c \
+		-c -o sixel/sixel.o
+	ar rcs libgui.a sixel/sixel.o
+
+stdsix:
+	gcc \
+		-Wall -Wextra \
+		-O2 -fdiagnostics-color=always \
+		-I include \
 		src/stdguilib.c \
-		-lsixel \
+		-c -o src/stdguilib.o
+	ar rcs libstdgui.a src/stdguilib.o
+
+six: sixlib stdsix
+	gcc \
+		-Wall -Wextra \
+		-O2 -fdiagnostics-color=always \
+		-I include \
+		-L . \
+		-L ../libsixel/src/.libs \
+		test.c \
+		-lgui -lstdgui -lsixel \
 		-o guisixel
 

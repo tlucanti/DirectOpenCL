@@ -1,78 +1,73 @@
 
-#include "../backend.h"
+#include <guilib.h>
+#include <stdguilib.h>
 #include <stdbool.h>
-#include <time.h>
 #include <stdio.h>
 
-#define STEP 10
-static int dx, dy;
+#include <stdlib.h>
 
-static void callback(struct gui_window *window, unsigned keycode, bool pressed)
+static int gx, gy;
+static int dx = 0, dy = 0;
+static bool mouse1;
+static int nr_pressed = 0;
+
+static void callback(struct gui_window *window, int keycode, bool pressed)
 {
-	const int delta = pressed ? STEP : 0;
+	const int step = pressed ? 10 : -10;
 	(void)window;
 
+	nr_pressed += pressed ? 1 : -1;
 	switch (keycode) {
-	case KEY_W:
-		dy = -delta;
-		break;
-	case KEY_S:
-		dy = delta;
-		break;
-	case KEY_A:
-		dx = -delta;
-		break;
-	case KEY_D:
-		dx = delta;
-		break;
+		case 'd':
+			dx += step;
+			break;
+		case 'a':
+			dx -= step;
+			break;
+		case 'w':
+			dy -= step;
+			break;
+		case 's':
+			dy += step;
+			break;
+		case MOUSE_LEFT:
+			mouse1 = pressed;
+			break;
 	}
-}
-
-#define square(x) ((x) * (x))
-
-static void draw_circle(struct gui_window *window, int x, int y, int radius, unsigned color)
-{
-	for (int yy = y - radius / 2; yy < y + radius / 2; yy++) {
-		for (int xx = x - radius / 2; xx < x + radius / 2; xx++) {
-			if (square(xx - x) + square(yy - y) <= radius) {
-				gui_set_pixel_safe(window, xx, yy, color);
-			}
-		}
-	}
-}
-
-static float get_fps(void)
-{
-	static struct timespec ts = {};
-	time_t prev_s = ts.tv_sec;
-	long prev_ns = ts.tv_nsec;
-
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	return 1.f / ((ts.tv_sec - prev_s) + (ts.tv_nsec - prev_ns) * 1e-9f);
 }
 
 int main()
 {
 	struct gui_window window;
-	const unsigned width = 800, height = 600;
-	int x, y;
+	const int width = 800, height = 600;
+	int mx1, my1, mx2, my2;
 
 	gui_bootstrap();
 	gui_create(&window, width, height);
-	gui_key_hook(&window, (key_hook_t)callback);
+	gui_key_hook(&window, callback);
 
-	x = width / 2, y = height / 2;
+	gx = width / 2;
+	gy = height / 2;
+	gui_mouse(&window, &mx1, &my1);
+
 	while (true) {
-		printf("fps: %f\n", get_fps());
+		gui_draw_borders(&window, 2, COLOR_WHITE);
 
-		draw_circle(&window, x, y, 20, COLOR_BLACK);
-		x = (x + dx + width) % width;
-		y = (y + dy + height) % height;
-		draw_circle(&window, x, y, 20, COLOR_BLUE);
+		gui_draw_circle(&window, gx, gy, 20, COLOR_BLACK);
+		gx += dx;
+		gy += dy;
+		gui_draw_circle(&window, gx, gy, 20, COLOR_WHITE);
+
+		gui_mouse(&window, &mx2, &my2);
+		if (mouse1) {
+			gui_draw_line(&window, mx1, my1, mx2, my2, COLOR_BLUE);
+		}
+		mx1 = mx2;
+		my1 = my2;
 
 		gui_draw(&window);
-		//gui_wfi(&window);
+
+		printf("fps: %f\r\n", gui_get_fps());
 	}
 }
-
 
