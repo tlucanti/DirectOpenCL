@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <unistd.h>
+#include <errno.h>
 
 #ifndef CONFIG_SIXEL_RAW_MODE
 # define CONFIG_SIXEL_RAW_MODE true
@@ -41,8 +42,9 @@ static volatile int g_mouse_y = 0;
 static volatile key_hook_t g_callback = NULL;
 static struct gui_window *g_window = NULL;
 static volatile bool wfi_flag;
-pthread_spinlock_t stdout_lock;
-pthread_spinlock_t key_lock;
+static pthread_spinlock_t stdout_lock;
+static pthread_spinlock_t key_lock;
+static volatile bool key_reader_thread_should_stop = false;
 
 struct key_metadata {
 	double last_press_time;
@@ -95,34 +97,37 @@ static void locator_enable(bool enable)
 	}
 }
 
-static void tty_init(void)
+static int tty_init(void)
 {
 	if (tcgetattr(STDIN_FILENO, &g_term_info) != 0) {
-		perror("tty_init() failed: ");
-		abort();
+		perror("tty_init() failed");
+		return EINVAL;
 	}
+	return 0;
 }
 
-static void tty_raw(bool enable)
+static int tty_raw(bool enable)
 {
 	struct termios raw_mode;
 
 	if (!enable) {
 		if (tcsetattr(STDIN_FILENO, TCSANOW, &g_term_info) != 0) {
 			perror("tty restore failed: ");
-			abort();
+			return EINVAL;
 		}
-		return;
+		return 0;
 	}
 
-	memcpy(&raw_mode, &g_term_info, sizeof(struct termios));
+	raw_mode = g_term_info;
 	cfmakeraw(&raw_mode);
 
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &raw_mode) != 0) {
 		perror("tty set raw failed: ");
 		tty_raw(false);
-		abort();
+		return EINVAL;
 	}
+
+	return 0;
 }
 
 static int sixel_write(char *data, int size, void *arg)
@@ -140,7 +145,7 @@ static double time_now()
 	return (double)ts.tv_sec + (double)ts.tv_nsec * 1e-9f;
 }
 
-static void *release_checker(void *arg)
+static void *release_checker_thread(void *arg)
 {
 	struct key_metadata *meta = arg;
 
@@ -157,7 +162,7 @@ static void *release_checker(void *arg)
 	return NULL;
 }
 
-static void key_tracker(int keycode)
+static void key_reader_event_tracker(int keycode)
 {
 	static struct key_metadata meta[256] = {};
 	static bool init = false;
@@ -179,15 +184,23 @@ static void key_tracker(int keycode)
 	}
 
 	if (keycode >= 256) {
+		pthread_spin_lock(&stdout_lock);
 		fprintf(stderr, "\nkey overflow\n");
+		pthread_spin_unlock(&stdout_lock);
 		abort();
 	}
 
 	time = time_now();
 	do_callback = (time - meta[keycode].last_press_time > DELTA);
 	meta[keycode].last_press_time = time;
-	pthread_create(&tid, NULL, release_checker, &meta[keycode]);
-	pthread_detach(tid);
+	if (pthread_create(&tid, NULL, release_checker_thread, &meta[keycode])) {
+		perror("release_checker_thread spawn fail");
+		abort();
+	}
+	if (pthread_detach(tid)) {
+		perror("release_checker_thread detach fail");
+		abort();
+	}
 
 	if (do_callback) {
 		pthread_spin_lock(&key_lock);
@@ -198,13 +211,7 @@ static void key_tracker(int keycode)
 	}
 }
 
-static char read_char(void)
-{
-	return getc(stdin);
-}
-
-__attribute__((__noreturn__))
-static void *key_reader(void *arg)
+static void *key_reader_thread(void *arg)
 {
 	int button, x, y;
 	char c, type;
@@ -213,38 +220,53 @@ static void *key_reader(void *arg)
 
 	(void)arg;
 
-	while (true) {
-		c = read_char();
+	while (!key_reader_thread_should_stop) {
+		c = getc(stdin);
+		if (c == EOF) {
+			goto read_fail;
+		}
 
 		if (!CONFIG_SIXEL_RAW_MODE && c == '\n') {
 			continue;
 		}
 
 		if (c == '\e') {
-			c = read_char();
-			if (c != '[') {
+			c = getc(stdin);
+			if (c == EOF) {
+				goto read_fail;
+			} else if (c != '[') {
+				pthread_spin_lock(&stdout_lock);
 				WANR_UNKNOWN_ESCAPE();
+				pthread_spin_unlock(&stdout_lock);
 				continue;
 			}
 
-			c = read_char();
+			c = getc(stdin);
+			if (c == EOF) {
+				goto read_fail;
+			}
+
 			switch (c) {
 			case 65:
-				key_tracker(KEY_UP);
+				key_reader_event_tracker(KEY_UP);
 				break;
 			case 66:
-				key_tracker(KEY_DOWN);
+				key_reader_event_tracker(KEY_DOWN);
 				break;
 			case 67:
-				key_tracker(KEY_RIGHT);
+				key_reader_event_tracker(KEY_RIGHT);
 				break;
 			case 68:
-				key_tracker(KEY_LEFT);
+				key_reader_event_tracker(KEY_LEFT);
 				break;
 			case '<':
 				success = scanf("%d;%d;%d%c", &button, &x, &y, &type);
-				if (success != 4) {
+				if (success == EOF) {
+					goto read_fail;
+				} else if (success != 4) {
+					pthread_spin_lock(&stdout_lock);
 					WANR_UNKNOWN_ESCAPE();
+					pthread_spin_unlock(&stdout_lock);
 					continue;
 				}
 
@@ -264,7 +286,9 @@ static void *key_reader(void *arg)
 						// mouse button released
 						pressed = false;
 					} else {
+						pthread_spin_lock(&stdout_lock);
 						WANR_UNKNOWN_ESCAPE();
+						pthread_spin_unlock(&stdout_lock);
 						continue;
 					}
 
@@ -292,37 +316,67 @@ static void *key_reader(void *arg)
 			set_wfi_flag();
 			exit(0);
 		} else {
-			key_tracker(c);
+			key_reader_event_tracker(c);
 		}
 	}
+
+	return NULL;
+
+read_fail:
+	pthread_spin_lock(&stdout_lock);
+	perror("key_reader_thread: stdin read error");
+	pthread_spin_unlock(&stdout_lock);
+	abort();
 }
 
 void gui_bootstrap(void)
 {
 	pthread_t tid;
 
-	pthread_spin_init(&stdout_lock, false);
-	pthread_spin_init(&key_lock, false);
+	if (pthread_spin_init(&stdout_lock, false)) {
+		perror("stdout_lock init fail");
+		goto fail;
+	}
+	if (pthread_spin_init(&key_lock, false)) {
+		perror("key_lock init fail");
+		goto fail;
+	}
 
 	if (CONFIG_KEYBOARD_ENABLE) {
-		pthread_create(&tid, NULL, key_reader, NULL);
+		if (pthread_create(&tid, NULL, key_reader_thread, NULL)) {
+			perror("key_reader_thread spawn fail");
+			goto fail;
+		}
 		locator_enable(true);
 	}
 
 	if (CONFIG_SIXEL_RAW_MODE) {
-		tty_init();
-		tty_raw(true);
+		if (tty_init()) {
+			goto fail;
+		}
+		if (tty_raw(true)) {
+			goto fail;
+		}
 	}
 
 	pthread_spin_lock(&stdout_lock);
 	string_write(STDOUT_FILENO, ESCAPE_HIDE_CURSOR);
 	pthread_spin_unlock(&stdout_lock);
+
+	return;
+fail:
+	key_reader_thread_should_stop = true;
+	pthread_spin_destroy(&key_lock);
+	pthread_spin_destroy(&stdout_lock);
+	abort();
 }
 
 void gui_finalize(void)
 {
 	if (CONFIG_SIXEL_RAW_MODE) {
-		tty_raw(false);
+		if (tty_raw(false)) {
+			abort();
+		}
 	}
 	locator_enable(false);
 	string_write(STDOUT_FILENO, ESCAPE_SHOW_CURSOR);
@@ -339,26 +393,27 @@ void gui_create(struct gui_window *window, unsigned int width, unsigned int heig
 	g_window = window;
 
 	if (window->__raw_pixels == NULL) {
-		fprintf(stderr, "window buffer alloc failed\n");
-		gui_finalize();
-		abort();
+		perror("window buffer alloc fail");
+		goto fail;
 	}
 
 	status = sixel_output_new(&window->__output, sixel_write, stdout, NULL);
 	if (SIXEL_FAILED(status)) {
-		fprintf(stderr, "sixel_output_new() failed\n");
-		gui_finalize();
-		abort();
+		perror("sixel_output_new() fail");
+		goto fail;
 	}
 
 	status = sixel_dither_new(&window->__dither, SIXEL_PALETTE_MAX, NULL);
 	if (SIXEL_FAILED(status)) {
-		fprintf(stderr, "sixel_dither_new() failed\n");
-		gui_finalize();
-		abort();
+		perror("sixel_dither_new() fail");
+		goto fail;
 	}
 
 	sixel_output_set_encode_policy(window->__output, SIXEL_ENCODEPOLICY_FAST);
+	return;
+fail:
+	gui_finalize();
+	abort();
 }
 
 void gui_destroy(struct gui_window *window)
