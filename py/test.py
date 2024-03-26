@@ -3,6 +3,8 @@
 from TKwindow import TKwindow
 from backend import *
 from keycodes import *
+from stream.WEBwindow import WEBwindow as gui
+
 
 import time
 
@@ -61,4 +63,8 @@ def main():
 
 		window.draw()
 
-main()
+if __name__ == '__main__':
+
+	width = 800
+	height = 600
+	window = gui(TKwindow(width, height))

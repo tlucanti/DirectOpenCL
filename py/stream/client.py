@@ -10,14 +10,19 @@ class Client():
         self.soc.close()
 
     def send(self, data):
-        self.soc.sendall(str(data).encode('utf-8'))
+        self.soc.sendall(data)
+
+    def recv(self):
+        data = self.soc.recv(10000)
+        if not data:
+            raise ConnectionResetError('client closed connection')
+        return data
+
 
 if __name__ == '__main__':
     cl = Client()
 
     print('client: sending Interrupt')
-    cl.send('keyboard interrupt')
+    cl.send('k;123')
     while True:
         cl.send(input())
-
-
