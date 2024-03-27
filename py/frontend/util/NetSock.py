@@ -49,4 +49,4 @@ class Client(NetSock):
 		self.fd.connect((host, port))
 
 	def __del__(self):
-		self.soc.close()
+		self.fd.close()

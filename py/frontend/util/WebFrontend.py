@@ -5,9 +5,15 @@ import pickle
 from .NetSock import Client
 
 class WebFrontend():
-    def __init__(self, frontend):
-        self.__frontend = frontend
+    def __init__(self, constructor):
         self.__client = Client()
+
+        event = self.__client.recv_string(1)
+        assert event == 'R'
+        width = self.__client.recv_number()
+        height = self.__client.recv_number()
+
+        self.__frontend = constructor(width, height)
         self.__frontend.key_hook(self.__key_callback)
 
         while True:
