@@ -20,7 +20,12 @@ class WebWindow():
         self.__mouse_y = 0
 
         self.__server = Server()
+        print('server: waiting for client')
         self.__server.accept()
+
+        self.__server.send_string('R')
+        self.__server.send_number(width)
+        self.__server.send_number(height)
 
         self.__thread_obj = threading.Thread(target=self.__key_reader_thread)
         self.__thread_obj.start()
@@ -33,7 +38,6 @@ class WebWindow():
 
     def draw(self, image):
         data = pickle.dumps(image)
-        # print(f'server: sending pickle of size {len(data)}')
         self.__server.send_string('p')
         self.__server.send_number(len(data))
         self.__server.do_send(data)

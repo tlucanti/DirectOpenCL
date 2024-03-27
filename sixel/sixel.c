@@ -34,7 +34,7 @@
 #define WANR_UNKNOWN_ESCAPE() /* empty */
 
 #define DELTA 0.1f
-#define MAX_FPS_RELAX 30
+#define MAX_FPS_RELAX 1000
 
 static struct termios g_term_info;
 static volatile int g_mouse_x = 0;
@@ -59,10 +59,12 @@ static void fps_relax(void)
 	long prev_ns = ts.tv_nsec;
 	float fps;
 
+	return;
+
 	do {
 		clock_gettime(CLOCK_MONOTONIC, &ts);
 		fps = 1.f / ((ts.tv_sec - prev_s) + (ts.tv_nsec - prev_ns) * 1e-9f);
-		usleep(5000);
+		//usleep(5000);
 	} while (fps > MAX_FPS_RELAX);
 }
 

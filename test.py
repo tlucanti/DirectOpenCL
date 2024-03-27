@@ -30,11 +30,8 @@ def callback(window, keycode, pressed):
 
 def main():
 	width, height = 800, 600
-	print('dbg: calling Window')
 	window = Window(width, height)
-	print('dbg: calling gui_create')
 	gui_create(window)
-	print('dbg: calling key_hook')
 	gui_key_hook(window, callback)
 
 	x, y = width // 2, height // 2

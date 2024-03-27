@@ -21,7 +21,9 @@ class NetSock():
 		self.do_send(str(data).encode('utf-8'))
 
 	def send_number(self, num):
-		self.send_string(f'{num:+010}')
+		num = f'{num:+010}'
+		assert len(num) == 10
+		self.send_string(num)
 
 	def recv_string(self, n):
 		return self.do_recv(n).decode('utf-8')
@@ -31,7 +33,8 @@ class NetSock():
 
 
 class Server(NetSock):
-	def __init__(self, host='127.0.0.1', port=7777):
+	def __init__(self, host='0.0.0.0', port=7777):
+		print(f'running server at {host}:{port}')
 		self.soc = socket.create_server((host, port), reuse_port=False)
 
 	def __del__(self):
@@ -50,3 +53,4 @@ class Client(NetSock):
 
 	def __del__(self):
 		self.fd.close()
+
