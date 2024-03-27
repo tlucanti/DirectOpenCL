@@ -6,15 +6,17 @@ import time
 from PIL import Image
 import numpy as np
 
-from py.frontend.GUIwindow import GUIwindow
-from py.frontend.util.getch import getch
-from py.frontend.util.getch import Tracker
+from .GUIwindow import GUIwindow
+from .util.getch import getch
+from .util.getch import Tracker
 
 class PILwindow(GUIwindow):
 
     ENV_NAME = 'GUILIB_PILIMAGE_FNAME'
 
-    def __init__(self, width, height, winid):
+    def __init__(self, width, height, winid=None):
+        if winid is None:
+            winid = self
         self.__width = width
         self.__height = height
         self.__winid = winid
