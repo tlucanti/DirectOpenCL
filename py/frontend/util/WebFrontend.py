@@ -16,6 +16,7 @@ class WebFrontend():
                 size = self.__client.recv_number()
                 # print(f'client: getting pickle of size {size}')
                 data = self.__client.do_recv(size)
+                # print(f'client: got pickle of size {len(data)}')
                 data = pickle.loads(data)
                 # print(f'client: got array {data}')
                 self.__frontend.draw(data)

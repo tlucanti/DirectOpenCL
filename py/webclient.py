@@ -1,6 +1,6 @@
 
-from frontend.TKwindow import TKwindow
+from frontend.TKwindow import TKwindow as Window
 from frontend.util.WebFrontend import WebFrontend
 
 if __name__ == '__main__':
-	WebFrontend(TKwindow(800, 600))
+	WebFrontend(Window(10, 10))
