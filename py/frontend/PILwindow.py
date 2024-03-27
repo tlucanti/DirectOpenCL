@@ -6,9 +6,9 @@ import time
 from PIL import Image
 import numpy as np
 
-from GUIwindow import GUIwindow
-from getch import getch
-from getch import Tracker
+from py.frontend.GUIwindow import GUIwindow
+from py.frontend.util.getch import getch
+from py.frontend.util.getch import Tracker
 
 class PILwindow(GUIwindow):
 

@@ -3,7 +3,7 @@ import ctypes
 import numpy as np
 
 #from TKwindow import TKwindow as Window
-from PILwindow import PILwindow as Window
+from .frontend.PILwindow import PILwindow as Window
 
 @ctypes.CFUNCTYPE(ctypes.py_object, ctypes.c_uint, ctypes.c_uint, ctypes.c_void_p)
 def window_constructor(width, height, winptr):

@@ -1,8 +1,8 @@
 
 class GUIwindow():
     """
-    A class to represent GUI window with raw pixel access and keyboard/mouse
-    event management
+    A base class to represent GUI window with raw pixel access and
+    keyboard/mouse event management
 
     Methods
     -------

@@ -6,9 +6,18 @@ import tkinter
 import numpy as np
 from PIL import Image, ImageTk
 
-from KeyTracker import KeyTracker
-from GUIwindow import GUIwindow
-import keycodes
+from .util.KeyTracker import KeyTracker
+from .GUIwindow import GUIwindow
+
+keycode_dict = {
+    0: 0,
+    1: 1,
+    2: 2,
+    ord('W'): ord('w'),
+    ord('A'): ord('a'),
+    ord('S'): ord('s'),
+    ord('D'): ord('d'),
+}
 
 class TKwindow(GUIwindow):
     def __init__(self, width, height, winid=None):
@@ -17,6 +26,7 @@ class TKwindow(GUIwindow):
         self.__winid = self if winid is None else winid
         self.__show_fps = False
         self.__fps_prev = 0
+        self.__key_callback = None
 
         self.__done = False
         self.__loop_thread = threading.Thread(target=self.__init_window)
@@ -95,7 +105,9 @@ class TKwindow(GUIwindow):
         self.__show_fps = bool(flag)
 
     def __key_handler(self, keycode, pressed):
-        self.__key_callback(self.__winid, keycode, pressed)
+        if self.__key_callback is not None:
+            keycode = keycode_dict.get(keycode, keycode)
+            self.__key_callback(self.__winid, keycode, pressed)
 
     def __on_mouse_press(self, event):
         if self.__key_callback is not None:
@@ -104,12 +116,6 @@ class TKwindow(GUIwindow):
     def __on_mouse_release(self, event):
         if self.__key_callback is not None:
             self.__key_callback(self.__winid, event.num, False)
-
-
-keycodes.KEY_W = 87
-keycodes.KEY_A = 65
-keycodes.KEY_S = 83
-keycodes.KEY_D = 68
 
 
 if __name__ == '__main__':
