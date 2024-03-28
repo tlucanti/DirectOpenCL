@@ -73,6 +73,39 @@ def gui_draw_circle(window, x, y, radius, color):
 			if (xx - x) ** 2 + (yy - y) ** 2 <= radius:
 				gui_set_pixel_safe(window, xx, yy, color)
 
+def gui_draw_borders(window, width, color):
+    for y in range(gui_height(window)):
+        for x in range(gui_width(window)):
+            if x < width or x >= gui_width(window) - width or \
+               y < width or y >= gui_height(window) - width:
+                   gui_set_pixel(window, x, y, color)
+
+def gui_draw_line(window, x0, y0, x1, y1, color):
+    dx = abs(x1 - x0)
+    dy = -abs(y1 - y0)
+
+    sx = 1 if x0 < x1 else -1
+    sy = 1 if y0 < y1 else -1
+    err = dx + dy
+
+    while True:
+        gui_set_pixel(window, x0, y0, color)
+
+        if x0 == x1 and y0 == y1:
+            break
+
+        if err * 2 > dy:
+            if x0 == x1:
+                break
+            err += dy
+            x0 += sx
+
+        if err * 2 <= dx:
+            if y0 == y1:
+                break
+            err += dx
+            y0 += sy
+
 def gui_get_fps():
 	global __fps_time_prev
 	ret = 1 / (time.time() - __fps_time_prev)
@@ -85,3 +118,8 @@ KEY_W = ord('w')
 KEY_A = ord('a')
 KEY_S = ord('s')
 KEY_D = ord('d')
+
+MOUSE_LEFT = 0
+MOUSE_RIGHT = 1
+MOUSE_MIDDLE = 2
+
