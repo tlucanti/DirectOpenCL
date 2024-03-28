@@ -10,9 +10,9 @@ from .util.KeyTracker import KeyTracker
 from .GUIwindow import GUIwindow
 
 keycode_dict = {
-    0: 0,
-    1: 1,
-    2: 2,
+    1: 0, # Left mouse -> 0
+    2: 3, # middle mouse -> 3
+    3: 2, # right mouse -> 2
     ord('W'): ord('w'),
     ord('A'): ord('a'),
     ord('S'): ord('s'),
@@ -111,11 +111,13 @@ class TKwindow(GUIwindow):
 
     def __on_mouse_press(self, event):
         if self.__key_callback is not None:
-            self.__key_callback(self.__winid, event.num, True)
+            keycode = keycode_dict.get(event.num, event.num)
+            self.__key_callback(self.__winid, keycode, True)
 
     def __on_mouse_release(self, event):
         if self.__key_callback is not None:
-            self.__key_callback(self.__winid, event.num, False)
+            keycode = keycode_dict.get(event.num, event.num)
+            self.__key_callback(self.__winid, keycode, False)
 
 
 if __name__ == '__main__':

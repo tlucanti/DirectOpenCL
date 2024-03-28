@@ -26,6 +26,11 @@ class WebFrontend():
                 data = pickle.loads(data)
                 # print(f'client: got array {data}')
                 self.__frontend.draw(data)
+            elif event == 'm':
+                x, y = self.__frontend.mouse()
+                self.__client.send_string('M')
+                self.__client.send_number(x)
+                self.__client.send_number(y)
             else:
                 print(f'client: unknown event {event}')
 
