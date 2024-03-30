@@ -118,7 +118,24 @@ void gui_wfi(struct gui_window *window);
 #define COLOR_YELLOW	0xFFFF00
 #define COLOR_PURPLE	COLOR_MAGENTA
 
-#ifdef CONFIG_PY_GUI_WINDOW
+#if 1
+#include <pthread.h>
+struct gui_window {
+        unsigned *__raw_pixels;
+        int __server;
+        int __client;
+        unsigned int __width;
+        unsigned int __height;
+        unsigned int __length;
+        int __mouse_x;
+        int __mouse_y;
+        key_hook_t __callback;
+        pthread_t __key_thread;
+        bool __waiting_for_mouse;
+        bool __waiting_for_interrupt;
+        bool __key_reader_run;
+};
+#elif 0
 struct gui_window {
 	void *__PY_window;
 	unsigned int *__raw_pixels;

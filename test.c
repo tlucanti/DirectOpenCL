@@ -4,8 +4,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include <stdlib.h>
-
 static int gx, gy;
 static int dx = 0, dy = 0;
 static bool mouse1;

@@ -1,10 +1,11 @@
 
 PYFLAGS = -Wall -Wextra -I . -fPIC
 SIXFLAGS = -Wall -Wextra -O2 -fdiagnostics-color=always -I ../libsixel/include -I include
+STREAMFLAGS = -Wall -Wextra -O0 -g3 -fdiagnostics-color=always -I include
 CC = gcc
 LD = gcc
 
-all: six
+all: stream
 
 py-build:
 	$(CC) $(PYFLAGS) -c py/backend.c -o py/backend.o
@@ -21,14 +22,24 @@ sixlib:
 	$(CC) $(SIXFLAGS) -c sixel/sixel.c -o sixel/sixel.o
 	ar rcs libgui.a sixel/sixel.o
 
-stdsix:
+stdgui:
 	$(CC) $(SIXFLAGS) -c src/stdguilib.c -o src/stdguilib.o
 	ar rcs libstdgui.a src/stdguilib.o
 
-six: sixlib stdsix
+six: sixlib stdgui
 	$(CC) $(SIXFLAGS) -L . \
 		-L ../libsixel/src/.libs \
 		test.c \
 		-lgui -lstdgui -lsixel \
 		-o guisixel
+
+stream: stdgui
+	$(CC) $(STREAMFLAGS) \
+		-L . \
+		stream/stream.c \
+		stream/netsock.c \
+		test.c \
+		-lstdgui \
+		-o guistream
+.PHONY: stream
 
