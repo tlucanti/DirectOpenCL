@@ -1,6 +1,7 @@
 
 import numpy as np
 import pickle
+import time
 
 from .NetSock import Client
 
@@ -17,6 +18,7 @@ class WebFrontend():
         self.__frontend.key_hook(self.__key_callback)
 
         while True:
+            start = time.time()
             event = self.__client.recv_string(1)
             if event == 'p':
                 size = self.__client.recv_number()
@@ -26,6 +28,33 @@ class WebFrontend():
                 data = pickle.loads(data)
                 # print(f'client: got array {data}')
                 self.__frontend.draw(data)
+            elif event == 'b':
+
+                size = self.__client.recv_number()
+                data = self.__client.do_recv(size)
+                width, height = self.__frontend.width(), self.__frontend.height()
+                recv = time.time()
+
+                assert len(data) == size
+                assert size == width * height * 4
+
+                array = np.zeros((height, width, 3))
+                i = 0
+                for y in range(height):
+                    for x in range(width):
+                        array[y][x][0] = data[i + 0]
+                        array[y][x][1] = data[i + 1]
+                        array[y][x][2] = data[i + 2]
+                        i += 4
+                decode = time.time()
+
+                self.__frontend.draw(array)
+                draw = time.time()
+
+                print('recv:', recv - start)
+                print('decode:', decode - recv)
+                print('draw:', draw - decode)
+                print()
             elif event == 'm':
                 x, y = self.__frontend.mouse()
                 self.__client.send_string('M')
