@@ -6,8 +6,8 @@ import time
 from .NetSock import Client
 
 class WebFrontend():
-    def __init__(self, constructor):
-        self.__client = Client()
+    def __init__(self, constructor, host, port=7777):
+        self.__client = Client(host, port)
 
         event = self.__client.recv_string(1)
         assert event == 'R'

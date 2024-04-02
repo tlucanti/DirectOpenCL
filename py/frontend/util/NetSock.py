@@ -35,7 +35,9 @@ class NetSock():
 class Server(NetSock):
 	def __init__(self, host='0.0.0.0', port=7777):
 		print(f'running server at {host}:{port}')
-		self.soc = socket.create_server((host, port), reuse_port=False)
+		self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.soc.bind((host, port))
+		self.soc.listen(1)
 
 	def __del__(self):
 		self.soc.close()
@@ -47,10 +49,9 @@ class Server(NetSock):
 
 
 class Client(NetSock):
-	def __init__(self, host='51.250.6.69', port=7777):
+	def __init__(self, host, port=7777):
 		self.fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.fd.connect((host, port))
 
 	def __del__(self):
 		self.fd.close()
-

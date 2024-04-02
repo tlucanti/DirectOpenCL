@@ -66,13 +66,13 @@ class WebWindow():
             if event == 'K' or event == 'k':
                 pressed = (event == 'K')
                 k = self.__server.recv_number()
-                print(f'server: key {k} {"pressed" if pressed else "released"}')
+                # print(f'server: key {k} {"pressed" if pressed else "released"}')
                 if self.__callback:
                     self.__callback(self.__winid, k, pressed)
             elif event == 'M':
                 self.__mouse_x = self.__server.recv_number()
                 self.__mouse_y = self.__server.recv_number()
-                print(f'server: mouse at {self.__mouse_x}:{self.__mouse_y}')
+                # print(f'server: mouse at {self.__mouse_x}:{self.__mouse_y}')
                 self.__waiting_for_mouse = False
             else:
                 print(f'server: unknown event: {event}')
