@@ -38,7 +38,7 @@ class WebWindow():
 
     def draw(self, image):
         data = pickle.dumps(image)
-        self.__server.send_string('p')
+        self.__server.send_string('P')
         self.__server.send_number(len(data))
         self.__server.do_send(data)
 

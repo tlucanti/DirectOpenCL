@@ -20,7 +20,7 @@ class WebFrontend():
         while True:
             start = time.time()
             event = self.__client.recv_string(1)
-            if event == 'p':
+            if event == 'P':
                 size = self.__client.recv_number()
                 # print(f'client: getting pickle of size {size}')
                 data = self.__client.do_recv(size)
@@ -28,23 +28,25 @@ class WebFrontend():
                 data = pickle.loads(data)
                 # print(f'client: got array {data}')
                 self.__frontend.draw(data)
-            elif event == 'b':
+            elif event == 'B':
+                compression = self.__client.recv_string(1)
 
-                size = self.__client.recv_number()
-                data = self.__client.do_recv(size)
-                width, height = self.__frontend.width(), self.__frontend.height()
-                recv = time.time()
+                if compression   == '0':
+                    size = self.__client.recv_number()
+                    data = self.__client.do_recv(size)
+                    width, height = self.__frontend.width(), self.__frontend.height()
+                    recv = time.time()
 
-                assert len(data) == size
-                assert size == width * height * 3
+                    assert len(data) == size
+                    assert size == width * height * 3
 
-                array = np.array(list(data), dtype=np.uint8)
-                array = array.reshape((height, width, 3))
-                print(array.shape)
-                decode = time.time()
+                    array = np.array(list(data), dtype=np.uint8)
+                    array = array.reshape((height, width, 3))
+                    print(array.shape)
+                    decode = time.time()
 
-                self.__frontend.draw(array)
-                draw = time.time()
+                    self.__frontend.draw(array)
+                    draw = time.time()
 
                 print('recv:', recv - start)
                 print('decode:', decode - recv)
