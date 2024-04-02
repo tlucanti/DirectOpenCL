@@ -9,10 +9,14 @@
 #include <unistd.h>
 #include <signal.h>
 
+#ifndef CONFIG_IMAGE_COMPRESS_AMOUNT
+# define CONFIG_IMAGE_COMPRESS_AMOUNT 0
+#endif
+
 static int g_server;
 
-static void image_compress(unsigned *image, unsigned long size,
-			   unsigned char *dst, unsigned long *dst_size)
+static void image_compress_0(unsigned *image, unsigned long size,
+			     unsigned char *dst, unsigned long *dst_size)
 {
         for (unsigned long i = 0; i < size; i++) {
                 dst[i * 3 + 0] = (image[i] & 0xFF0000) >> 16u;  // red
@@ -21,6 +25,18 @@ static void image_compress(unsigned *image, unsigned long size,
         }
 
         *dst_size = size * 3;
+}
+
+static char image_compress(unsigned *image, unsigned long size,
+			   unsigned char *dst, unsigned long *dst_size)
+{
+        switch (CONFIG_IMAGE_COMPRESS_AMOUNT) {
+        case 0:
+                image_compress_0(image, size, dst, dst_size);
+                return '0';
+        default:
+                abort();
+        }
 }
 
 static void sig_handler(int sig)
@@ -159,10 +175,12 @@ unsigned *gui_raw_pixels(const struct gui_window *window)
 void gui_draw(const struct gui_window *window)
 {
         unsigned long comp_size;
+        char compress_amount;
 
-	image_compress(window->__raw_pixels, window->__length,
-		       window->__compressed, &comp_size);
-	soc_send_char(window->__client, 'b');
+	compress_amount = image_compress(window->__raw_pixels, window->__length,
+					 window->__compressed, &comp_size);
+	soc_send_char(window->__client, 'B');
+        soc_send_char(window->__client, compress_amount);
         soc_send_number(window->__client, comp_size);
         soc_send(window->__client, window->__compressed, comp_size);
 }
