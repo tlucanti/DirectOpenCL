@@ -43,10 +43,9 @@ class PYGAMEwindow(GUIwindow):
 		#assert image.shape == (self.height(), self.width(), 3)
 
 		image = image.transpose(1, 0, 2)
-		self.__surface = pygame.surfarray.make_surface(image)
+		pygame.surfarray.blit_array(self.__surface, image)
 		self.__screen.blit(self.__surface, (0, 0))
 		pygame.display.flip()
-		time.sleep(1e-2)
 
 	def __main_loop(self, width, height):
 		pygame.init()
