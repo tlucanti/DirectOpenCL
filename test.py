@@ -1,7 +1,7 @@
 
 
 #from py.frontend.TKwindow import TKwindow as Window
-from py.frontend.WEBwindow import WebWindow as Window
+from py.frontend.PYGAMEwindow import PYGAMEwindow as Window
 from py.api import *
 
 import time
@@ -41,7 +41,7 @@ def main():
 	gui_key_hook(window, callback)
 
 	while True:
-		print('fps', gui_get_fps())
+		# print('fps', gui_get_fps())
 
 		gui_draw_circle(window, x, y, 40, COLOR_BLACK)
 		x = (x + dx + width) % width

@@ -36,16 +36,11 @@ class WebFrontend():
                 recv = time.time()
 
                 assert len(data) == size
-                assert size == width * height * 4
+                assert size == width * height * 3
 
-                array = np.zeros((height, width, 3))
-                i = 0
-                for y in range(height):
-                    for x in range(width):
-                        array[y][x][0] = data[i + 0]
-                        array[y][x][1] = data[i + 1]
-                        array[y][x][2] = data[i + 2]
-                        i += 4
+                array = np.array(list(data), dtype=np.uint8)
+                array = array.reshape((height, width, 3))
+                print(array.shape)
                 decode = time.time()
 
                 self.__frontend.draw(array)
@@ -54,6 +49,7 @@ class WebFrontend():
                 print('recv:', recv - start)
                 print('decode:', decode - recv)
                 print('draw:', draw - decode)
+                print(f'TOTAL: {draw - start}, fps: {1 / (draw - start)}')
                 print()
             elif event == 'm':
                 x, y = self.__frontend.mouse()
