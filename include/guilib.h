@@ -122,6 +122,7 @@ void gui_wfi(struct gui_window *window);
 #include <pthread.h>
 struct gui_window {
         unsigned *__raw_pixels;
+        unsigned char *__compressed;
         int __server;
         int __client;
         unsigned int __width;

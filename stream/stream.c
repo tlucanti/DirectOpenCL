@@ -11,6 +11,18 @@
 
 static int g_server;
 
+static void image_compress(unsigned *image, unsigned long size,
+			   unsigned char *dst, unsigned long *dst_size)
+{
+        for (unsigned long i = 0; i < size; i++) {
+                dst[i * 3 + 0] = (image[i] & 0xFF0000) >> 16u;  // red
+                dst[i * 3 + 1] = (image[i] & 0x00FF00) >> 8u;   // green
+                dst[i * 3 + 2] = (image[i] & 0x0000FF);         // blue
+        }
+
+        *dst_size = size * 3;
+}
+
 static void sig_handler(int sig)
 {
         if (sig == SIGPIPE) {
@@ -85,7 +97,8 @@ void gui_create(struct gui_window *window, unsigned int width, unsigned int heig
         window->__client = soc_server_accept(g_server);
 
         window->__raw_pixels = malloc(window->__length * sizeof(unsigned));
-        if (window->__raw_pixels == NULL) {
+        window->__compressed = malloc(window->__length * sizeof(unsigned));
+        if (window->__raw_pixels == NULL || window->__compressed == NULL) {
                 fprintf(stderr, "no memory\n");
                 abort();
         }
@@ -145,9 +158,13 @@ unsigned *gui_raw_pixels(const struct gui_window *window)
 
 void gui_draw(const struct gui_window *window)
 {
-        soc_send_char(window->__client, 'b');
-        soc_send_number(window->__client, window->__length * sizeof(int));
-        soc_send(window->__client, window->__raw_pixels, window->__length * sizeof(int));
+        unsigned long comp_size;
+
+	image_compress(window->__raw_pixels, window->__length,
+		       window->__compressed, &comp_size);
+	soc_send_char(window->__client, 'b');
+        soc_send_number(window->__client, comp_size);
+        soc_send(window->__client, window->__compressed, comp_size);
 }
 
 void gui_key_hook(struct gui_window *window, key_hook_t callback)
