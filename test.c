@@ -37,7 +37,7 @@ static void callback(struct gui_window *window, int keycode, bool pressed)
 int main()
 {
 	struct gui_window window;
-	const int width = 100, height = 80;
+	const int width = 800, height = 600;
 	int mx1, my1, mx2, my2;
 
 	gui_bootstrap();

@@ -13,17 +13,17 @@ void gui_finalize(void);
 void gui_create(struct gui_window *window, unsigned int width, unsigned int height);
 void gui_destroy(struct gui_window *window);
 
-unsigned int gui_width(const struct gui_window *window);
-unsigned int gui_height(const struct gui_window *window);
+unsigned int gui_width(struct gui_window *window);
+unsigned int gui_height(struct gui_window *window);
 
 void gui_set_pixel(struct gui_window *window, unsigned x, unsigned y, unsigned color);
 void gui_set_pixel_raw(struct gui_window *window, unsigned long i, unsigned color);
 int gui_set_pixel_safe(struct gui_window *window, unsigned x, unsigned y, unsigned color);
-unsigned *gui_raw_pixels(const struct gui_window *window);
-void gui_draw(const struct gui_window *window);
+unsigned *gui_raw_pixels(struct gui_window *window);
+void gui_draw(struct gui_window *window);
 
 void gui_key_hook(struct gui_window *window, key_hook_t hook);
-void gui_mouse(const struct gui_window *window, int *x, int *y);
+void gui_mouse(struct gui_window *window, int *x, int *y);
 void gui_wfi(struct gui_window *window);
 
 #define KEY_0 '0'
@@ -120,11 +120,11 @@ void gui_wfi(struct gui_window *window);
 
 #if 1
 #include <pthread.h>
+#include <netsock.h>
 struct gui_window {
         unsigned *__raw_pixels;
         unsigned char *__compressed;
-        int __server;
-        int __client;
+        struct soc_stream __client;
         unsigned int __width;
         unsigned int __height;
         unsigned int __length;

@@ -1,7 +1,8 @@
 
-PYFLAGS = -Wall -Wextra -I . -fPIC
-SIXFLAGS = -Wall -Wextra -O2 -fdiagnostics-color=always -I ../libsixel/include -I include
-STREAMFLAGS = -Wall -Wextra -O0 -g3 -fdiagnostics-color=always -I include
+CFLAGS = -Wall -Wextra -fdiagnostics-color=always -I include
+PYFLAGS = $(CFLAGS) -I . -fPIC
+SIXFLAGS = $(CFLAGS) -O2 -I ../libsixel/include
+STREAMFLAGS = $(CFLAGS) -O0 -g3 -I stream
 CC = gcc
 LD = gcc
 
@@ -23,7 +24,7 @@ sixlib:
 	ar rcs libgui.a sixel/sixel.o
 
 stdgui:
-	$(CC) $(SIXFLAGS) -c src/stdguilib.c -o src/stdguilib.o
+	$(CC) $(STREAMFLAGS) -c src/stdguilib.c -o src/stdguilib.o
 	ar rcs libstdgui.a src/stdguilib.o
 
 six: sixlib stdgui

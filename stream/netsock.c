@@ -8,6 +8,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <netsock.h>
+
 static void print_soc_addr(int soc)
 {
         struct sockaddr_in address;
@@ -59,7 +61,7 @@ int soc_create_server(unsigned short port)
         return soc;
 }
 
-int soc_server_accept(int soc)
+void soc_server_accept(int soc, struct soc_stream *stream)
 {
         struct sockaddr_in address;
         socklen_t size = sizeof(address);
@@ -73,12 +75,12 @@ int soc_server_accept(int soc)
 
         print_soc_addr(client);
 
-        return client;
+        stream->socket = client;
 }
 
-void soc_send(int soc, const void *data, unsigned long size)
+void soc_send(struct soc_stream *soc, const void *data, unsigned long size)
 {
-        ssize_t ret = send(soc, data, size, 0);
+        ssize_t ret = send(soc->socket, data, size, 0);
 
         if (ret < 0) {
                 fprintf(stderr, "soc_send: send() fail\n");
@@ -89,14 +91,14 @@ void soc_send(int soc, const void *data, unsigned long size)
         }
 }
 
-void soc_recv(int soc, void *dstp, unsigned long size)
+void soc_recv(struct soc_stream *soc, void *dstp, unsigned long size)
 {
         unsigned long got = 0;
         long rd;
         unsigned char *dst = dstp;
 
         while (got < size) {
-                rd = recv(soc, dst + got, size - got, 0);
+                rd = recv(soc->socket, dst + got, size - got, 0);
                 if (rd <= 0) {
                         fprintf(stderr, "soc_recv: recv() fail\n");
                         abort();
@@ -105,17 +107,17 @@ void soc_recv(int soc, void *dstp, unsigned long size)
         }
 }
 
-void soc_send_string(int soc, const char *s)
+void soc_send_string(struct soc_stream *soc, const char *s)
 {
         soc_send(soc, s, strlen(s));
 }
 
-void soc_send_char(int soc, char c)
+void soc_send_char(struct soc_stream *soc, char c)
 {
         soc_send(soc, &c, 1);
 }
 
-void soc_send_number(int soc, int number)
+void soc_send_number(struct soc_stream *soc, int number)
 {
         char buf[12] = {};
 
@@ -123,11 +125,12 @@ void soc_send_number(int soc, int number)
         soc_send(soc, buf, 10);
 }
 
-void soc_recv_string(int soc, char *dst, unsigned long n)
+void soc_recv_string(struct soc_stream *soc, char *dst, unsigned long n)
 {
         soc_recv(soc, dst, n);
 }
-char soc_recv_char(int soc)
+
+char soc_recv_char(struct soc_stream *soc)
 {
         char c;
 
@@ -135,7 +138,7 @@ char soc_recv_char(int soc)
         return c;
 }
 
-int soc_recv_number(int soc)
+int soc_recv_number(struct soc_stream *soc)
 {
         char buf[12];
 

@@ -1,6 +1,5 @@
 
 #include <guilib.h>
-#include "netsock.h"
 
 #include <stdio.h>
 #include <pthread.h>
@@ -55,13 +54,13 @@ static void *key_reader_thread(void *winptr)
         char event;
 
         while (window->__key_reader_run) {
-                event = soc_recv_char(window->__client);
+                event = soc_recv_char(&window->__client);
 
                 switch (event) {
                 case 'K':
                 case 'k': {
                         bool pressed = (event == 'K');
-                        int key = soc_recv_number(window->__client);
+                        int key = soc_recv_number(&window->__client);
                         printf("server: key %d %s\n", key, pressed ? "pressed" : "released");
                         if (window->__callback != NULL) {
                                 window->__callback(window, key, pressed);
@@ -69,8 +68,8 @@ static void *key_reader_thread(void *winptr)
                         break;
                 }
                 case 'M':
-                          window->__mouse_x = soc_recv_number(window->__client);
-                          window->__mouse_y = soc_recv_number(window->__client);
+                          window->__mouse_x = soc_recv_number(&window->__client);
+                          window->__mouse_y = soc_recv_number(&window->__client);
                           //printf("server: mouse at %d:%d\n", window->__mouse_x, window->__mouse_y);
                           window->__waiting_for_mouse = false;
                           break;
@@ -110,7 +109,7 @@ void gui_create(struct gui_window *window, unsigned int width, unsigned int heig
         window->__key_reader_run = true;
 
         printf("server: waiting for client\n");
-        window->__client = soc_server_accept(g_server);
+        soc_server_accept(g_server, &window->__client);
 
         window->__raw_pixels = malloc(window->__length * sizeof(unsigned));
         window->__compressed = malloc(window->__length * sizeof(unsigned));
@@ -121,9 +120,9 @@ void gui_create(struct gui_window *window, unsigned int width, unsigned int heig
 
         pthread_create(&window->__key_thread, NULL, key_reader_thread, window);
 
-        soc_send_char(window->__client, 'R');
-        soc_send_number(window->__client, width);
-        soc_send_number(window->__client, height);
+        soc_send_char(&window->__client, 'R');
+        soc_send_number(&window->__client, width);
+        soc_send_number(&window->__client, height);
 }
 
 void gui_destroy(struct gui_window *window)
@@ -132,12 +131,12 @@ void gui_destroy(struct gui_window *window)
         pthread_join(window->__key_thread, NULL);
 }
 
-unsigned int gui_width(const struct gui_window *window)
+unsigned int gui_width(struct gui_window *window)
 {
         return window->__width;
 }
 
-unsigned int gui_height(const struct gui_window *window)
+unsigned int gui_height(struct gui_window *window)
 {
         return window->__height;
 }
@@ -167,22 +166,22 @@ int gui_set_pixel_safe(struct gui_window *window, unsigned x, unsigned y, unsign
         }
 }
 
-unsigned *gui_raw_pixels(const struct gui_window *window)
+unsigned *gui_raw_pixels(struct gui_window *window)
 {
         return window->__raw_pixels;
 }
 
-void gui_draw(const struct gui_window *window)
+void gui_draw(struct gui_window *window)
 {
         unsigned long comp_size;
         char compress_amount;
 
 	compress_amount = image_compress(window->__raw_pixels, window->__length,
 					 window->__compressed, &comp_size);
-	soc_send_char(window->__client, 'B');
-        soc_send_char(window->__client, compress_amount);
-        soc_send_number(window->__client, comp_size);
-        soc_send(window->__client, window->__compressed, comp_size);
+	soc_send_char(&window->__client, 'B');
+        soc_send_char(&window->__client, compress_amount);
+        soc_send_number(&window->__client, comp_size);
+        soc_send(&window->__client, window->__compressed, comp_size);
 }
 
 void gui_key_hook(struct gui_window *window, key_hook_t callback)
@@ -190,10 +189,10 @@ void gui_key_hook(struct gui_window *window, key_hook_t callback)
         window->__callback = callback;
 }
 
-void gui_mouse(const struct gui_window *window, int *x, int *y)
+void gui_mouse(struct gui_window *window, int *x, int *y)
 {
         ((struct gui_window *)window)->__waiting_for_mouse = true;
-        soc_send_char(window->__client, 'm');
+        soc_send_char(&window->__client, 'm');
         while (window->__waiting_for_mouse) {
                 usleep(10000);
         }
