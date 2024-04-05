@@ -124,7 +124,8 @@ void gui_wfi(struct gui_window *window);
 struct gui_window {
         unsigned *__raw_pixels;
         unsigned char *__compressed;
-        struct soc_stream __client;
+        struct soc_stream event_socket;
+        struct soc_stream pix_socket;
         unsigned int __width;
         unsigned int __height;
         unsigned int __length;

@@ -12,7 +12,8 @@
 # define CONFIG_IMAGE_COMPRESS_AMOUNT 0
 #endif
 
-static int g_server;
+static int g_event_server;
+static int g_pix_server;
 
 static void image_compress_0(unsigned *image, unsigned long size,
 			     unsigned char *dst, unsigned long *dst_size)
@@ -54,13 +55,13 @@ static void *key_reader_thread(void *winptr)
         char event;
 
         while (window->__key_reader_run) {
-                event = soc_recv_char(&window->__client);
+                event = soc_recv_char(&window->event_socket);
 
                 switch (event) {
                 case 'K':
                 case 'k': {
                         bool pressed = (event == 'K');
-                        int key = soc_recv_number(&window->__client);
+                        int key = soc_recv_number(&window->event_socket);
                         printf("server: key %d %s\n", key, pressed ? "pressed" : "released");
                         if (window->__callback != NULL) {
                                 window->__callback(window, key, pressed);
@@ -68,8 +69,8 @@ static void *key_reader_thread(void *winptr)
                         break;
                 }
                 case 'M':
-                          window->__mouse_x = soc_recv_number(&window->__client);
-                          window->__mouse_y = soc_recv_number(&window->__client);
+                          window->__mouse_x = soc_recv_number(&window->event_socket);
+                          window->__mouse_y = soc_recv_number(&window->event_socket);
                           //printf("server: mouse at %d:%d\n", window->__mouse_x, window->__mouse_y);
                           window->__waiting_for_mouse = false;
                           break;
@@ -87,12 +88,14 @@ void gui_bootstrap(void)
                 fprintf(stderr, "gui_bootstrap: setting signal handler fail\n");
                 abort();
         }
-        g_server = soc_create_server(7777);
+        g_event_server = soc_create_server(7777);
+        g_pix_server = soc_create_server(7778);
 }
 
 void gui_finalize(void)
 {
-        soc_close(g_server);
+        soc_close(g_event_server);
+        soc_close(g_pix_server);
 }
 
 void gui_create(struct gui_window *window, unsigned int width, unsigned int height)
@@ -109,7 +112,12 @@ void gui_create(struct gui_window *window, unsigned int width, unsigned int heig
         window->__key_reader_run = true;
 
         printf("server: waiting for client\n");
-        soc_server_accept(g_server, &window->__client);
+        soc_server_accept(g_event_server, &window->event_socket);
+        soc_server_accept(g_pix_server, &window->pix_socket);
+
+        soc_send_string(&window->pix_socket, "B0");
+        soc_send_number(&window->pix_socket, width * height * 3);
+        soc_send_flush(&window->pix_socket);
 
         window->__raw_pixels = malloc(window->__length * sizeof(unsigned));
         window->__compressed = malloc(window->__length * sizeof(unsigned));
@@ -120,10 +128,10 @@ void gui_create(struct gui_window *window, unsigned int width, unsigned int heig
 
         pthread_create(&window->__key_thread, NULL, key_reader_thread, window);
 
-        soc_send_char(&window->__client, 'R');
-        soc_send_number(&window->__client, width);
-        soc_send_number(&window->__client, height);
-        soc_send_flush(&window->__client);
+        soc_send_char(&window->event_socket, 'R');
+        soc_send_number(&window->event_socket, width);
+        soc_send_number(&window->event_socket, height);
+        soc_send_flush(&window->event_socket);
 }
 
 void gui_destroy(struct gui_window *window)
@@ -175,15 +183,11 @@ unsigned *gui_raw_pixels(struct gui_window *window)
 void gui_draw(struct gui_window *window)
 {
         unsigned long comp_size;
-        char compress_amount;
 
-	compress_amount = image_compress(window->__raw_pixels, window->__length,
-					 window->__compressed, &comp_size);
-	soc_send_char(&window->__client, 'B');
-        soc_send_char(&window->__client, compress_amount);
-        soc_send_number(&window->__client, comp_size);
-        soc_send(&window->__client, window->__compressed, comp_size);
-        soc_send_flush(&window->__client);
+	image_compress(window->__raw_pixels, window->__length,
+		       window->__compressed, &comp_size);
+	soc_send(&window->pix_socket, window->__compressed, comp_size);
+        soc_send_flush(&window->pix_socket);
 }
 
 void gui_key_hook(struct gui_window *window, key_hook_t callback)
@@ -194,8 +198,8 @@ void gui_key_hook(struct gui_window *window, key_hook_t callback)
 void gui_mouse(struct gui_window *window, int *x, int *y)
 {
         ((struct gui_window *)window)->__waiting_for_mouse = true;
-        soc_send_char(&window->__client, 'm');
-        soc_send_flush(&window->__client);
+        soc_send_char(&window->event_socket, 'm');
+        soc_send_flush(&window->event_socket);
         while (window->__waiting_for_mouse) {
                 usleep(10000);
         }
