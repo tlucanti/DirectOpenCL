@@ -123,6 +123,7 @@ void gui_create(struct gui_window *window, unsigned int width, unsigned int heig
         soc_send_char(&window->__client, 'R');
         soc_send_number(&window->__client, width);
         soc_send_number(&window->__client, height);
+        soc_send_flush(&window->__client);
 }
 
 void gui_destroy(struct gui_window *window)
@@ -182,6 +183,7 @@ void gui_draw(struct gui_window *window)
         soc_send_char(&window->__client, compress_amount);
         soc_send_number(&window->__client, comp_size);
         soc_send(&window->__client, window->__compressed, comp_size);
+        soc_send_flush(&window->__client);
 }
 
 void gui_key_hook(struct gui_window *window, key_hook_t callback)
@@ -193,6 +195,7 @@ void gui_mouse(struct gui_window *window, int *x, int *y)
 {
         ((struct gui_window *)window)->__waiting_for_mouse = true;
         soc_send_char(&window->__client, 'm');
+        soc_send_flush(&window->__client);
         while (window->__waiting_for_mouse) {
                 usleep(10000);
         }

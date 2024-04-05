@@ -76,17 +76,26 @@ void soc_server_accept(int soc, struct soc_stream *stream)
         print_soc_addr(client);
 
         stream->socket = client;
+        stream->out_occupied = 0;
 }
 
 void soc_send(struct soc_stream *soc, const void *data, unsigned long size)
 {
-        ssize_t ret = send(soc->socket, data, size, 0);
+        ssize_t ret = 0;
+
+        if (size + soc->out_occupied >= sizeof(soc->out_buff)) {
+                soc_send_flush(soc);
+        }
+        if (size >= sizeof(soc->out_buff)) {
+                ret = send(soc->socket, data, size, 0);
+                printf("sent %lu\n", size);
+        } else {
+                memcpy(soc->out_buff + soc->out_occupied, data, size);
+                soc->out_occupied += size;
+        }
 
         if (ret < 0) {
                 fprintf(stderr, "soc_send: send() fail\n");
-                abort();
-        } else if (ret < (long)size) {
-                fprintf(stderr, "soc_send: sent not all data\n");
                 abort();
         }
 }
@@ -123,6 +132,17 @@ void soc_send_number(struct soc_stream *soc, int number)
 
         sprintf(buf, "%+010d", number);
         soc_send(soc, buf, 10);
+}
+
+void soc_send_flush(struct soc_stream *soc)
+{
+        if (soc->out_occupied == 0) {
+                return;
+        }
+
+        send(soc->socket, soc->out_buff, soc->out_occupied, 0);
+        printf("sent %u\n", soc->out_occupied);
+        soc->out_occupied = 0;
 }
 
 void soc_recv_string(struct soc_stream *soc, char *dst, unsigned long n)
