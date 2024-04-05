@@ -19,9 +19,8 @@ class WebWindow():
         self.__mouse_x = 0
         self.__mouse_y = 0
 
-        self.__server = Server()
         print('server: waiting for client')
-        self.__server.accept()
+        self.__server = Server()
 
         self.__server.send_string('R')
         self.__server.send_number(width)

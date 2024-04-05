@@ -30,7 +30,7 @@ class WebFrontend():
 
         while True:
             start = time.time()
-            event = self.__client.recv_string(1)
+            event = self.__client.recv_char()
             if event == 'P':
                 size = self.__client.recv_number()
                 # print(f'client: getting pickle of size {size}')
@@ -50,7 +50,7 @@ class WebFrontend():
                 time_report(['prep', 'recv', 'decode', 'draw'], [start, prep, recv, decode, draw])
 
             elif event == 'B':
-                compression = self.__client.recv_string(1)
+                compression = self.__client.recv_char()
 
                 if compression   == '0':
                     size = self.__client.recv_number()
