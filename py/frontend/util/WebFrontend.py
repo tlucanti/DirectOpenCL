@@ -1,8 +1,8 @@
 
 import numpy as np
-import pickle
 import time
 import threading
+import cv2
 
 from .NetSock import TcpClient, UdpClient
 
@@ -59,10 +59,11 @@ class WebFrontend():
                 assert len(data) == size
                 recv = time.time()
 
-                data = pickle.loads(data)
+                data = np.frombuffer(data, np.uint8)
+                img = cv2.imdecode(data, cv2.IMREAD_COLOR)
                 decode = time.time()
 
-                self.__frontend.draw(data)
+                self.__frontend.draw(img)
                 draw = time.time()
 
                 time_report(['recv', 'decode', 'draw'], [start, recv, decode, draw])

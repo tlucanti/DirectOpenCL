@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 import threading
 import time
+import cv2
 
 from .util.NetSock import TcpServer, UdpServer
 
@@ -36,8 +37,8 @@ class WebWindow():
         return self.__height
 
     def draw(self, image):
-        data = pickle.dumps(image)
-        self.pix_socket.send(len(data), data)
+        frame = cv2.imencode('.jpg', image, (cv2.IMWRITE_JPEG_QUALITY, 100))[1].tobytes()
+        self.pix_socket.send(len(frame), frame)
 
     def key_hook(self, callback):
         self.__callback = callback

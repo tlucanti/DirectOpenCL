@@ -34,7 +34,7 @@ COLOR_WHITE = Color(255, 255, 255)
 ## WINDOW LEVEL API
 
 def gui_create(window: GUIwindow):
-	window.__image = np.zeros([window.height(), window.width(), 3], dtype=np.int8)
+	window.__image = np.zeros([window.height(), window.width(), 3], dtype=np.uint8)
 
 def gui_width(window: GUIwindow):
 	return window.width()
@@ -122,4 +122,3 @@ KEY_D = ord('d')
 MOUSE_LEFT = 0
 MOUSE_RIGHT = 1
 MOUSE_MIDDLE = 2
-
