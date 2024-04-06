@@ -83,12 +83,13 @@ void soc_send(struct soc_stream *soc, const void *data, unsigned long size)
 {
         ssize_t ret = 0;
 
+        printf("sending %lu\n", size);
         if (size + soc->out_occupied >= sizeof(soc->out_buff)) {
                 soc_send_flush(soc);
         }
-        if (size >= sizeof(soc->out_buff)) {
+        if (size >= 1024) {
+                printf("direct sent %lu\n", size);
                 ret = send(soc->socket, data, size, 0);
-                printf("sent %lu\n", size);
         } else {
                 memcpy(soc->out_buff + soc->out_occupied, data, size);
                 soc->out_occupied += size;
@@ -98,6 +99,7 @@ void soc_send(struct soc_stream *soc, const void *data, unsigned long size)
                 fprintf(stderr, "soc_send: send() fail\n");
                 abort();
         }
+        printf("done\n");
 }
 
 void soc_recv(struct soc_stream *soc, void *dstp, unsigned long size)

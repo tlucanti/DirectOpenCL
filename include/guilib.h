@@ -123,7 +123,6 @@ void gui_wfi(struct gui_window *window);
 #include <netsock.h>
 struct gui_window {
         unsigned *__raw_pixels;
-        unsigned char *__compressed;
         struct soc_stream event_socket;
         struct soc_stream pix_socket;
         unsigned int __width;

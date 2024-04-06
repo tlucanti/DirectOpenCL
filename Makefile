@@ -39,8 +39,10 @@ stream: stdgui
 		-L . \
 		stream/stream.c \
 		stream/netsock.c \
+		stream/encode.c \
 		test.c \
 		-lstdgui \
+		-ljpeg \
 		-o guistream
 .PHONY: stream
 
