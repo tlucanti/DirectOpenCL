@@ -4,7 +4,7 @@ import numpy as np
 import threading
 import time
 
-from .util.NetSock import Server
+from .util.NetSock import TcpServer, UdpServer
 
 class WebWindow():
     def __init__(self, width, height, winid=None):
@@ -20,11 +20,11 @@ class WebWindow():
         self.__mouse_y = 0
 
         print('server: waiting for client')
-        self.__server = Server()
+        self.pix_socket = TcpServer(port=7778)
+        self.event_socket = TcpServer(port=7777)
 
-        self.__server.send_string('R')
-        self.__server.send_number(width)
-        self.__server.send_number(height)
+        self.event_socket.send('R', width, height)
+        self.event_socket.send('E', 'P')
 
         self.__thread_obj = threading.Thread(target=self.__key_reader_thread)
         self.__thread_obj.start()
@@ -37,16 +37,14 @@ class WebWindow():
 
     def draw(self, image):
         data = pickle.dumps(image)
-        self.__server.send_string('P')
-        self.__server.send_number(len(data))
-        self.__server.do_send(data)
+        self.pix_socket.send(len(data), data)
 
     def key_hook(self, callback):
         self.__callback = callback
 
     def mouse(self):
         self.__waiting_for_mouse = True
-        self.__server.send_string('m')
+        self.event_socket.send('m')
         while self.__waiting_for_mouse:
             time.sleep(1e-5)
 
@@ -60,17 +58,17 @@ class WebWindow():
 
     def __key_reader_thread(self):
         while True:
-            event = self.__server.recv_string(1)
+            event = self.event_socket.recv_string(1)
 
             if event == 'K' or event == 'k':
                 pressed = (event == 'K')
-                k = self.__server.recv_number()
+                k = self.event_socket.recv_number()
                 # print(f'server: key {k} {"pressed" if pressed else "released"}')
                 if self.__callback:
                     self.__callback(self.__winid, k, pressed)
             elif event == 'M':
-                self.__mouse_x = self.__server.recv_number()
-                self.__mouse_y = self.__server.recv_number()
+                self.__mouse_x = self.event_socket.recv_number()
+                self.__mouse_y = self.event_socket.recv_number()
                 # print(f'server: mouse at {self.__mouse_x}:{self.__mouse_y}')
                 self.__waiting_for_mouse = False
             else:
