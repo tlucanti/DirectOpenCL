@@ -89,7 +89,7 @@ def gui_draw_line(window, x0, y0, x1, y1, color):
     err = dx + dy
 
     while True:
-        gui_set_pixel(window, x0, y0, color)
+        gui_set_pixel_safe(window, x0, y0, color)
 
         if x0 == x1 and y0 == y1:
             break

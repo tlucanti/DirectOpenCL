@@ -50,7 +50,7 @@ class WebFrontend():
                 print(f'client: unknown event {event}')
 
     def __draw_thread(self, pix_socket):
-        if self.__encoding == 'P':
+        if self.__encoding == 'B1':
             while True:
                 start = time.time()
 
