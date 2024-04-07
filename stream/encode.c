@@ -2,7 +2,7 @@
 #include <jpeglib.h>
 #include <jerror.h>
 
-void create_jpg(unsigned char **outbuffer, unsigned long *outlen, unsigned char *inbuffer, int width, int height, int quality)
+int create_jpg(unsigned char **outbuffer, unsigned long *outlen, unsigned char *inbuffer, int width, int height, int quality)
 {
     struct jpeg_compress_struct cinfo;
     struct jpeg_error_mgr jerr;
@@ -32,5 +32,7 @@ void create_jpg(unsigned char **outbuffer, unsigned long *outlen, unsigned char 
 
     jpeg_finish_compress(&cinfo);
     jpeg_destroy_compress(&cinfo);
+
+    return 0;
 }
 

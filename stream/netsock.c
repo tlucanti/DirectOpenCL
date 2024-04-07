@@ -1,4 +1,6 @@
 
+#include <guilib_internals.h>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -16,11 +18,11 @@ static void print_soc_addr(int soc)
         socklen_t size = sizeof(address);
 
         if (getpeername(soc, (struct sockaddr *)&address, &size) < 0) {
-                fprintf(stderr, "print_soc_addr: getpeername() fail\n");
-                abort();
+                gui_perror("getting client address fail");
+                printf("Connected by UNKNOWN affress\n");
+        } else {
+                printf("Connected by %s\n", inet_ntoa(address.sin_addr));
         }
-
-        printf("Connected by %s\n", inet_ntoa(address.sin_addr));
 }
 
 int soc_create_server(unsigned short port)
@@ -37,31 +39,35 @@ int soc_create_server(unsigned short port)
 
         soc = socket(AF_INET, SOCK_STREAM, 0);
         if (soc < 0) {
-                fprintf(stderr, "soc_create_server: socket() fail\n");
-                abort();
+                gui_perror("create socket fail");
+                goto fail;
         }
 
         if (setsockopt(soc, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
-                fprintf(stderr, "soc_create_server: setsockopt() fail\n");
-                abort();
+                gui_perror("set socket option fail");
+                goto fail;
         }
 
         if (bind(soc, (struct sockaddr *)&address, sizeof(address)) < 0) {
-                fprintf(stderr, "soc_create_server: bind() fail\n");
-                abort();
+                gui_perror("socket bin fail");
+                goto fail;
         }
 
         if (listen(soc, 1) < 0) {
-                fprintf(stderr, "soc_create_server: listen() fail\n");
-                abort();
+                gui_perror("socket listen fail");
+                goto fail;
         }
 
         printf("running server at %s:%hu\n", SERVER_HOST, port);
 
         return soc;
+
+fail:
+        close(soc);
+        return -1;
 }
 
-void soc_server_accept(int soc, struct soc_stream *stream)
+int soc_server_accept(int soc, struct soc_stream *stream)
 {
         struct sockaddr_in address;
         socklen_t size = sizeof(address);
@@ -69,26 +75,25 @@ void soc_server_accept(int soc, struct soc_stream *stream)
 
         client = accept(soc, (struct sockaddr *)&address, &size);
         if (client < 0) {
-                fprintf(stderr, "soc_server_accept: accept() fail\n");
-                abort();
+                gui_perror("client accept fail");
+                return EFAULT;
         }
 
         print_soc_addr(client);
 
         stream->socket = client;
         stream->out_occupied = 0;
+        return 0;
 }
 
 void soc_send(struct soc_stream *soc, const void *data, unsigned long size)
 {
         ssize_t ret = 0;
 
-        printf("sending %lu\n", size);
         if (size + soc->out_occupied >= sizeof(soc->out_buff)) {
                 soc_send_flush(soc);
         }
         if (size >= 1024) {
-                printf("direct sent %lu\n", size);
                 ret = send(soc->socket, data, size, 0);
         } else {
                 memcpy(soc->out_buff + soc->out_occupied, data, size);
@@ -96,10 +101,8 @@ void soc_send(struct soc_stream *soc, const void *data, unsigned long size)
         }
 
         if (ret < 0) {
-                fprintf(stderr, "soc_send: send() fail\n");
-                abort();
+                gui_panic("send fail");
         }
-        printf("done\n");
 }
 
 void soc_recv(struct soc_stream *soc, void *dstp, unsigned long size)
@@ -111,8 +114,7 @@ void soc_recv(struct soc_stream *soc, void *dstp, unsigned long size)
         while (got < size) {
                 rd = recv(soc->socket, dst + got, size - got, 0);
                 if (rd <= 0) {
-                        fprintf(stderr, "soc_recv: recv() fail\n");
-                        abort();
+                        gui_panic("recv fail");
                 }
                 got += rd;
         }
@@ -143,7 +145,6 @@ void soc_send_flush(struct soc_stream *soc)
         }
 
         send(soc->socket, soc->out_buff, soc->out_occupied, 0);
-        printf("sent %u\n", soc->out_occupied);
         soc->out_occupied = 0;
 }
 
@@ -171,8 +172,7 @@ int soc_recv_number(struct soc_stream *soc)
 void soc_close(int soc)
 {
         if (close(soc)) {
-                fprintf(stderr, "soc_close: close() fail\n");
-                abort();
+                gui_panic("socket close fail");
         }
 }
 

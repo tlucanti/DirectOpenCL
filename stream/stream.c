@@ -1,5 +1,6 @@
 
 #include <guilib.h>
+#include <netsock.h>
 
 #include <stdio.h>
 #include <pthread.h>
@@ -8,22 +9,44 @@
 #include <unistd.h>
 #include <signal.h>
 
-#ifndef CONFIG_IMAGE_COMPRESS_TYPE
-# define CONFIG_IMAGE_COMPRESS_TYPE 1
-#endif
+#define COMPRESSION_TYPE CONFIG_GUILIB_STREAM_COMPRESSION_TYPE
+#define QUALITY CONFIG_GUILIB_STREAM_COMPRESSION_QUALITY
+
+struct gui_window {
+        unsigned *raw_pixels;
+        struct soc_stream event_socket;
+        struct soc_stream pix_socket;
+        unsigned int width;
+        unsigned int height;
+        unsigned long length;
+        int mouse_x;
+        int mouse_y;
+        key_hook_t callback;
+        pthread_t key_thread;
+        bool waiting_for_mouse;
+        bool waiting_for_interrupt;
+        bool key_reader_run;
+};
 
 static int g_event_server;
 static int g_pix_server;
 
-void create_jpg(unsigned char **outbuffer, unsigned long *outlen, unsigned char *inbuffer, int width, int height, int quality);
+int create_jpg(unsigned char **outbuffer, unsigned long *outlen,
+	       unsigned char *inbuffer, int width, int height, int quality);
 
 static void image_encode(unsigned *image, unsigned long size,
 			     unsigned char *dst, unsigned long *dst_size)
 {
         for (unsigned long i = 0; i < size; i++) {
+#if COMPRESS_TYPE == 0
                 dst[i * 3 + 2] = (image[i] & 0xFF0000) >> 16u;  // red
                 dst[i * 3 + 1] = (image[i] & 0x00FF00) >> 8u;   // green
                 dst[i * 3 + 0] = (image[i] & 0x0000FF);         // blue
+# else
+                dst[i * 3 + 2] = (image[i] & 0xFF0000) >> 16u;  // red
+                dst[i * 3 + 1] = (image[i] & 0x00FF00) >> 8u;   // green
+                dst[i * 3 + 0] = (image[i] & 0x0000FF);         // blue
+#endif
         }
 
         *dst_size = size * 3;
@@ -32,10 +55,10 @@ static void image_encode(unsigned *image, unsigned long size,
 static void sig_handler(int sig)
 {
         if (sig == SIGPIPE) {
-                fprintf(stderr, "server: got SIGPIPE\n");
-                abort();
+                gui_panic("server killed by SIGPIPE");
         } else {
-                abort();
+                fprintf(stderr, "got signal %d\n", sig);
+                gui_panic("server killed by signal");
         }
 }
 
@@ -44,7 +67,7 @@ static void *key_reader_thread(void *winptr)
         struct gui_window *window = winptr;
         char event;
 
-        while (window->__key_reader_run) {
+        while (window->key_reader_run) {
                 event = soc_recv_char(&window->event_socket);
 
                 switch (event) {
@@ -53,107 +76,154 @@ static void *key_reader_thread(void *winptr)
                         bool pressed = (event == 'K');
                         int key = soc_recv_number(&window->event_socket);
                         printf("server: key %d %s\n", key, pressed ? "pressed" : "released");
-                        if (window->__callback != NULL) {
-                                window->__callback(window, key, pressed);
+                        if (window->callback != NULL) {
+                                window->callback(window, key, pressed);
                         }
                         break;
                 }
                 case 'M':
-                          window->__mouse_x = soc_recv_number(&window->event_socket);
-                          window->__mouse_y = soc_recv_number(&window->event_socket);
+                          window->mouse_x = soc_recv_number(&window->event_socket);
+                          window->mouse_y = soc_recv_number(&window->event_socket);
                           //printf("server: mouse at %d:%d\n", window->__mouse_x, window->__mouse_y);
-                          window->__waiting_for_mouse = false;
+                          window->waiting_for_mouse = false;
                           break;
                 default:
                           printf("server: unkwonwn event\n");
                 }
-                window->__waiting_for_interrupt = false;
+                window->waiting_for_interrupt = false;
         }
         return NULL;
 }
 
-void gui_bootstrap(void)
+int gui_bootstrap(void)
 {
         if (signal(SIGPIPE, sig_handler)) {
-                //fprintf(stderr, "gui_bootstrap: setting signal handler fail\n");
-                //abort();
+                gui_perror("set signal handler fail");
         }
+
         g_event_server = soc_create_server(7777);
+        if (g_event_server < 0) {
+                gui_perror("create event socket fail");
+                goto fail;
+        }
+
         g_pix_server = soc_create_server(7778);
+        if (g_pix_server < 0) {
+                gui_perror("create image socket fail");
+                goto fail;
+        }
+
+        return 0;
+
+fail:
+        soc_close(g_event_server);
+        soc_close(g_pix_server);
+        return EFAULT;
 }
 
-void gui_finalize(void)
+int gui_finalize(void)
 {
         soc_close(g_event_server);
         soc_close(g_pix_server);
+        return 0;
 }
 
-void gui_create(struct gui_window *window, unsigned int width, unsigned int height)
+struct gui_window *gui_alloc(void)
 {
-        window->__width = width;
-        window->__height = height;
-        window->__length = (unsigned long)width * height;
+        return malloc(sizeof(struct gui_window));
+}
 
-        window->__callback = NULL;
-        window->__waiting_for_mouse = false;
-        window->__waiting_for_interrupt = false;
-        window->__mouse_x = 0;
-        window->__mouse_y = 0;
-        window->__key_reader_run = true;
+int gui_create(struct gui_window *window, unsigned int width, unsigned int height)
+{
+        int err;
+
+        window->width = width;
+        window->height = height;
+        window->length = (unsigned long)width * height;
+
+        window->callback = NULL;
+        window->waiting_for_mouse = false;
+        window->waiting_for_interrupt = false;
+        window->mouse_x = 0;
+        window->mouse_y = 0;
+        window->key_reader_run = true;
+
+        window->raw_pixels = malloc(window->length * sizeof(unsigned));
+        if (window->raw_pixels == NULL) {
+                gui_perror("out of memory");
+                err = ENOMEM;
+                goto fail;
+        }
 
         printf("server: waiting for client\n");
         soc_server_accept(g_pix_server, &window->pix_socket);
         soc_server_accept(g_event_server, &window->event_socket);
 
+        if (pthread_create(&window->key_thread, NULL, key_reader_thread, window)) {
+                gui_perror("key_reader thread spawn fail");
+                err = EFAULT;
+                goto fail;
+        }
+
         soc_send_char(&window->event_socket, 'R');
         soc_send_number(&window->event_socket, width);
         soc_send_number(&window->event_socket, height);
-        if (CONFIG_IMAGE_COMPRESS_TYPE == 0) {
+        if (COMPRESSION_TYPE == 0) {
                 soc_send_string(&window->event_socket, "EB0");
-        } else if (CONFIG_IMAGE_COMPRESS_TYPE == 1) {
+        } else if (COMPRESSION_TYPE == 1) {
                 soc_send_string(&window->event_socket, "EB1");
+        } else {
+                gui_panic("invalid image compress type");
         }
         soc_send_flush(&window->event_socket);
 
-        window->__raw_pixels = malloc(window->__length * sizeof(unsigned));
+        return 0;
 
-        pthread_create(&window->__key_thread, NULL, key_reader_thread, window);
+fail:
+        gui_destroy(window);
+        return err;
 }
 
-void gui_destroy(struct gui_window *window)
+int gui_destroy(struct gui_window *window)
 {
-        window->__key_reader_run = false;
-        pthread_join(window->__key_thread, NULL);
+        free(window->raw_pixels);
+
+        window->key_reader_run = false;
+        if (pthread_join(window->key_thread, NULL)) {
+                gui_perror("key_reader join fail");
+                return EFAULT;
+        }
+        return 0;
 }
 
 unsigned int gui_width(struct gui_window *window)
 {
-        return window->__width;
+        return window->width;
 }
 
 unsigned int gui_height(struct gui_window *window)
 {
-        return window->__height;
+        return window->height;
 }
 
 void gui_set_pixel(struct gui_window *window, unsigned x, unsigned y, unsigned color)
 {
-#ifdef DEBUG
-        if (x >= window->__width || y >= window->__height) {
+#ifdef CONFIG_GUILIB_DEBUG
+        if (x >= window->width || y >= window->height) {
                 fprintf(stderr, "gui_set_pixel(): out of bounds\n");
         }
 #endif
-        gui_set_pixel_raw(window, (unsigned long)y * window->__width + x, color);
+        gui_set_pixel_raw(window, (unsigned long)y * window->width + x, color);
 }
 
 void gui_set_pixel_raw(struct gui_window *window, unsigned long i, unsigned color)
 {
-        window->__raw_pixels[i] = color;
+        window->raw_pixels[i] = color;
 }
 
 int gui_set_pixel_safe(struct gui_window *window, unsigned x, unsigned y, unsigned color)
 {
-        if (x < window->__width && y < window->__height) {
+        if (x < window->width && y < window->height) {
                 gui_set_pixel(window, x, y, color);
                 return 0;
         } else {
@@ -163,58 +233,68 @@ int gui_set_pixel_safe(struct gui_window *window, unsigned x, unsigned y, unsign
 
 unsigned *gui_raw_pixels(struct gui_window *window)
 {
-        return window->__raw_pixels;
+        return window->raw_pixels;
 }
 
-void gui_draw(struct gui_window *window)
+int gui_draw(struct gui_window *window)
 {
         static unsigned char *temp = NULL;
         unsigned char *encoded = NULL;
         unsigned long encoded_size;
 
         if (temp == NULL) {
-                temp = malloc(window->__length * 3);
+                temp = malloc(window->length * 3);
+                if (temp == NULL) {
+                        gui_perror("out of memory");
+                        return ENOMEM;
+                }
         }
-        image_encode(window->__raw_pixels, window->__length, temp, &encoded_size);
+        image_encode(window->raw_pixels, window->length, temp, &encoded_size);
 
-        if (CONFIG_IMAGE_COMPRESS_TYPE == 0) {
+        if (COMPRESSION_TYPE == 0) {
                 encoded = temp;
-        } else if (CONFIG_IMAGE_COMPRESS_TYPE == 1) {
-	        create_jpg(&encoded, &encoded_size, temp, window->__width, window->__height, 50);
-        }
+        } else if (COMPRESSION_TYPE == 1) {
+		if (create_jpg(&encoded, &encoded_size, temp, window->width,
+			   window->height, QUALITY)) {
+                        gui_perror("jpeg compression fail");
+                        free(encoded);
+                        return EFAULT;
+                }
+	}
 
         printf("encoded size %lu\n", encoded_size);
         soc_send_number(&window->pix_socket, encoded_size);
 	soc_send(&window->pix_socket, encoded, encoded_size);
         soc_send_flush(&window->pix_socket);
 
-        if (CONFIG_IMAGE_COMPRESS_TYPE == 1) {
+        if (COMPRESSION_TYPE == 1) {
                 free(encoded);
         }
+        return 0;
 }
 
 void gui_key_hook(struct gui_window *window, key_hook_t callback)
 {
-        window->__callback = callback;
+        window->callback = callback;
 }
 
 void gui_mouse(struct gui_window *window, int *x, int *y)
 {
-        ((struct gui_window *)window)->__waiting_for_mouse = true;
+        window->waiting_for_mouse = true;
         soc_send_char(&window->event_socket, 'm');
         soc_send_flush(&window->event_socket);
-        while (window->__waiting_for_mouse) {
+        while (window->waiting_for_mouse) {
                 usleep(10000);
         }
 
-        *x = window->__mouse_x;
-        *y = window->__mouse_y;
+        *x = window->mouse_x;
+        *y = window->mouse_y;
 }
 
 void gui_wfi(struct gui_window *window)
 {
-        window->__waiting_for_interrupt = true;
-        while (window->__waiting_for_interrupt) {
+        window->waiting_for_interrupt = true;
+        while (window->waiting_for_interrupt) {
                 usleep(10000);
         }
 }

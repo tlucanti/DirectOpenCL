@@ -121,26 +121,4 @@ void gui_wfi(struct gui_window *window);
 #define COLOR_YELLOW	0xFFFF00
 #define COLOR_PURPLE	COLOR_MAGENTA
 
-#if 0
-#include <pthread.h>
-#include <netsock.h>
-struct gui_window {
-        unsigned *__raw_pixels;
-        struct soc_stream event_socket;
-        struct soc_stream pix_socket;
-        unsigned int __width;
-        unsigned int __height;
-        unsigned int __length;
-        int __mouse_x;
-        int __mouse_y;
-        key_hook_t __callback;
-        pthread_t __key_thread;
-        bool __waiting_for_mouse;
-        bool __waiting_for_interrupt;
-        bool __key_reader_run;
-};
-#elif 0
-#else
-#endif
-
 #endif /* GUILIB_H */

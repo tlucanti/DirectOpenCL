@@ -11,7 +11,7 @@ struct soc_stream {
 };
 
 int soc_create_server(unsigned short port);
-void soc_server_accept(int soc, struct soc_stream *client);
+int soc_server_accept(int soc, struct soc_stream *client);
 
 void soc_send(struct soc_stream *soc, const void *data, unsigned long size);
 void soc_send_string(struct soc_stream *soc, const char *s);
