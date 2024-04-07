@@ -66,7 +66,8 @@ int main()
 
 		gui_draw(window);
 
-		printf("fps: %f\r\n", gui_get_fps());
+		printf("\rfps: %f\t", gui_get_fps());
+                fflush(stdout);
 	}
 }
 

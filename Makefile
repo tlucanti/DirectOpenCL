@@ -1,6 +1,6 @@
 
 CFLAGS = -Wall -Wextra -fdiagnostics-color=always -I include
-PYFLAGS = $(CFLAGS) -I . -fPIC
+PYFLAGS = $(CFLAGS) -fPIC
 SIXFLAGS = $(CFLAGS) -O2 -I ../libsixel/include
 STREAMFLAGS = $(CFLAGS) -O0 -g3 -I stream
 CC = gcc
@@ -16,18 +16,19 @@ CFLAGS += -D CONFIG_GUILIB_SIXEL_RAW_MODE=$(CONFIG_GUILIB_SIXEL_RAW_MODE)
 CFLAGS += -D CONFIG_GUILIB_SIXEL_KEYBOARD_ENABLE=$(CONFIG_GUILIB_SIXEL_KEYBOARD_ENABLE)
 CFLAGS += -D CONFIG_GUILIB_SIXEL_WARN_UNKNOWN_ESCAPE=$(CONFIG_GUILIB_SIXEL_WARN_UNKNOWN_ESCAPE)
 
-all: six
+all: py-build
 
 py-build:
 	$(CC) $(PYFLAGS) -c py/backend.c -o py/backend.o
-	$(CC) $(PYFLAGS) -c py/test.c -o py/test.o
-	$(LD) -shared py/backend.o py/test.o -o py/libbackend.so
+	$(CC) $(PYFLAGS) -c src/stdguilib.c -o py/stdguilib.o
+	$(CC) $(PYFLAGS) -c test.c -o py/test.o
+	$(LD) -shared py/backend.o py/stdguilib.o py/test.o -o py/libbackend.so
 
 py-tkinter: py-build
 	cd py && python3 frontend.py
 
 py-pil: py-build
-	cd py && python3 frontend.py
+	python3 py/cpython.py
 
 sixlib:
 	$(CC) $(SIXFLAGS) -c sixel/sixel.c -o sixel/sixel.o

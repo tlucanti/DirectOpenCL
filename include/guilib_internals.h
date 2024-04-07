@@ -9,6 +9,11 @@
 #ifndef __always_inline
 # define __always_inline inline __attribute__((__always_inline__))
 #endif
+
+#ifndef noinline
+# define noinline __attribute__((__noinline__))
+#endif
+
 #ifndef __used
 # define __used __attribute__((__used__))
 #endif

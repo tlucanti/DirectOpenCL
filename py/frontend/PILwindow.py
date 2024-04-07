@@ -2,6 +2,7 @@
 import os
 import threading
 import time
+import sys
 
 from PIL import Image
 import numpy as np
@@ -60,4 +61,7 @@ class PILwindow(GUIwindow):
     def __key_listener(self):
         while True:
             key = getch()
-            self.__tracker.press(ord(key))
+            print(f'pressed {key}')
+            if key == ord('x'):
+                sys.exit()
+            self.__tracker.press(key)

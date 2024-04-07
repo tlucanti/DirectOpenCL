@@ -1,116 +1,163 @@
 
-#include <stdbool.h>
-#include <malloc.h>
-
-#include "../backend.h"
-#include "../common.h"
-
-#define for_each_pixel(x, y, i, width, height)	\
-	for (y = 0; y < height; y++, i++)	\
-		for (x = 0; x < width; x++, i++)
+#include <guilib.h>
 
 typedef void *(*PY_window_constructor_t)(unsigned int, unsigned int, void *);
+typedef void (*PY_window_destructor_t)(void *);
 typedef void (*PY_window_draw_t)(void *, unsigned int *);
 typedef void (*PY_window_key_hook_t)(void *, key_hook_t);
 typedef void (*PY_window_wfi_t)(void *);
-typedef void (*PY_window_destructor_t)(void *);
+typedef void (*PY_window_mouse_t)(void *, int *, int *);
 
-PY_window_constructor_t PY_window_constructor = NULL;
-PY_window_draw_t PY_window_draw = NULL;
-PY_window_key_hook_t PY_window_key_hook = NULL;
-PY_window_wfi_t PY_window_wfi = NULL;
-PY_window_destructor_t PY_window_destructor = NULL;
+__used PY_window_constructor_t PY_window_constructor = NULL;
+__used PY_window_destructor_t PY_window_destructor = NULL;
+__used PY_window_draw_t PY_window_draw = NULL;
+__used PY_window_key_hook_t PY_window_key_hook = NULL;
+__used PY_window_wfi_t PY_window_wfi = NULL;
+__used PY_window_mouse_t PY_window_mouse = NULL;
 
-__noinline __used
+struct gui_window {
+	void *PY_window;
+	unsigned int *raw_pixels;
+	unsigned int width;
+	unsigned int height;
+	unsigned long length;
+};
+
+noinline __used
 void _set_PY_window_constructor(PY_window_constructor_t func)
 {
 	PY_window_constructor = func;
 }
 
-__noinline __used
-void _set_PY_window_draw(PY_window_draw_t func)
-{
-	PY_window_draw = func;
-}
-
-__noinline __used
-void _set_PY_window_key_hook(PY_window_key_hook_t func)
-{
-	PY_window_key_hook = func;
-}
-
-__noinline __used
-void _set_PY_window_wfi(PY_window_wfi_t func)
-{
-	PY_window_wfi = func;
-}
-
-__noinline __used
+noinline __used
 void _set_PY_window_destructor(PY_window_destructor_t func)
 {
 	PY_window_destructor = func;
 }
 
-void gui_bootstrap(void)
+noinline __used
+void _set_PY_window_draw(PY_window_draw_t func)
 {
+	PY_window_draw = func;
 }
 
-void gui_create(struct gui_window *window, unsigned int width, unsigned int height)
+noinline __used
+void _set_PY_window_key_hook(PY_window_key_hook_t func)
 {
-	window->__PY_window = PY_window_constructor(width, height, window);
-	window->__width = width;
-	window->__height = height;
-	window->__length = (unsigned long)width * height;
-	window->__raw_pixels = malloc(sizeof(unsigned int) * window->__length);
+	PY_window_key_hook = func;
 }
 
-void gui_draw(const struct gui_window *window)
+noinline __used
+void _set_PY_window_wfi(PY_window_wfi_t func)
 {
-	PY_window_draw(window->__PY_window, window->__raw_pixels);
+	PY_window_wfi = func;
 }
 
-void gui_key_hook(struct gui_window *window, key_hook_t hook)
+noinline __used
+void _set_PY_window_mouse(PY_window_mouse_t func)
 {
-	PY_window_key_hook(window->__PY_window, hook);
+        PY_window_mouse = func;
 }
 
-void gui_wfi(struct gui_window *window)
+int gui_bootstrap(void)
 {
-	PY_window_wfi(window->__PY_window);
+        return 0;
 }
 
-void gui_destroy(struct gui_window *window)
+int gui_finalize(void)
 {
-	printf("c: destroying window %p\n", window->__PY_window);
-	PY_window_destructor(window->__PY_window);
-	free(window->__raw_pixels);
-
-	window->__PY_window = NULL;
-	window->__raw_pixels = NULL;
+        return 0;
 }
 
-void gui_set_pixel_raw(struct gui_window *window, unsigned long i, unsigned color)
+struct gui_window *gui_alloc(void)
 {
-	window->__raw_pixels[i] = color;
+        return malloc(sizeof(struct gui_window));
+}
+
+int gui_create(struct gui_window *window, unsigned int width, unsigned int height)
+{
+	window->PY_window = PY_window_constructor(width, height, window);
+	window->width = width;
+	window->height = height;
+	window->length = (unsigned long)width * height;
+	window->raw_pixels = malloc(sizeof(unsigned int) * window->length);
+
+        if (window->PY_window == NULL) {
+                gui_perror("python window constructor fail");
+                return EFAULT;
+        } else if (window->raw_pixels == NULL) {
+                gui_perror("out of memory");
+                return ENOMEM;
+        }
+        return 0;
+}
+
+int gui_destroy(struct gui_window *window)
+{
+	printf("c: destroying window %p\n", window->PY_window);
+	PY_window_destructor(window->PY_window);
+	free(window->raw_pixels);
+
+	window->PY_window = NULL;
+	window->raw_pixels = NULL;
+        return 0;
+}
+
+unsigned int gui_width(struct gui_window *window)
+{
+        return window->width;
+}
+
+unsigned int gui_height(struct gui_window *window)
+{
+        return window->height;
 }
 
 void gui_set_pixel(struct gui_window *window, unsigned x, unsigned y, unsigned color)
 {
-	gui_set_pixel_raw(window, (unsigned long)y * window->__width + x, color);
+	gui_set_pixel_raw(window, (unsigned long)y * window->width + x, color);
 }
 
-int gui_set_pixel_raw_safe(struct gui_window *window, unsigned long i, unsigned color)
+void gui_set_pixel_raw(struct gui_window *window, unsigned long i, unsigned color)
 {
-	if (i < window->__length) {
-		window->__raw_pixels[i] = color;
-		return 0;
-	} else {
-		return 1;
-	}
+	window->raw_pixels[i] = color;
 }
 
 int gui_set_pixel_safe(struct gui_window *window, unsigned x, unsigned y, unsigned color)
 {
-	return gui_set_pixel_raw_safe(window, (unsigned long)y * window->__width + x, color);
+	unsigned long i = (unsigned long)y * window->width + x;
+
+	if (i < window->length) {
+		gui_set_pixel_raw(window, i, color);
+		return 0;
+	} else {
+		return EINVAL;
+	}
+}
+
+unsigned *gui_raw_pixels(struct gui_window *window)
+{
+        return window->raw_pixels;
+}
+
+int gui_draw(struct gui_window *window)
+{
+	PY_window_draw(window->PY_window, window->raw_pixels);
+        return 0;
+}
+
+void gui_key_hook(struct gui_window *window, key_hook_t hook)
+{
+	PY_window_key_hook(window->PY_window, hook);
+}
+
+void gui_mouse(struct gui_window *window, int *x, int *y)
+{
+        PY_window_mouse(window->PY_window, x, y);
+}
+
+void gui_wfi(struct gui_window *window)
+{
+	PY_window_wfi(window->PY_window);
 }
 

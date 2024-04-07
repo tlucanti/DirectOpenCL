@@ -140,13 +140,6 @@ struct gui_window {
         bool __key_reader_run;
 };
 #elif 0
-struct gui_window {
-	void *__PY_window;
-	unsigned int *__raw_pixels;
-	unsigned int __width;
-	unsigned int __height;
-	unsigned long __length;
-};
 #else
 #endif
 
