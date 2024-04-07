@@ -1,17 +1,20 @@
 
-#ifndef GUILIB_BACKEND_H
-#define GUILIB_BACKEND_H
+#ifndef GUILIB_H
+#define GUILIB_H
 
 #include <stdbool.h>
+#include <guilib_internals.h>
 
 struct gui_window;
 
 typedef void (*key_hook_t)(struct gui_window *window, int keycode, bool pressed);
 
-void gui_bootstrap(void);
-void gui_finalize(void);
-void gui_create(struct gui_window *window, unsigned int width, unsigned int height);
-void gui_destroy(struct gui_window *window);
+int gui_bootstrap(void);
+int gui_finalize(void);
+
+struct gui_window *gui_alloc(void);
+int gui_create(struct gui_window *window, unsigned int width, unsigned int height);
+int gui_destroy(struct gui_window *window);
 
 unsigned int gui_width(struct gui_window *window);
 unsigned int gui_height(struct gui_window *window);
@@ -20,7 +23,7 @@ void gui_set_pixel(struct gui_window *window, unsigned x, unsigned y, unsigned c
 void gui_set_pixel_raw(struct gui_window *window, unsigned long i, unsigned color);
 int gui_set_pixel_safe(struct gui_window *window, unsigned x, unsigned y, unsigned color);
 unsigned *gui_raw_pixels(struct gui_window *window);
-void gui_draw(struct gui_window *window);
+int gui_draw(struct gui_window *window);
 
 void gui_key_hook(struct gui_window *window, key_hook_t hook);
 void gui_mouse(struct gui_window *window, int *x, int *y);
@@ -118,7 +121,7 @@ void gui_wfi(struct gui_window *window);
 #define COLOR_YELLOW	0xFFFF00
 #define COLOR_PURPLE	COLOR_MAGENTA
 
-#if 1
+#if 0
 #include <pthread.h>
 #include <netsock.h>
 struct gui_window {
@@ -145,19 +148,6 @@ struct gui_window {
 	unsigned long __length;
 };
 #else
-#include <sixel.h>
-
-struct gui_window {
-	unsigned int __width;
-	unsigned int __height;
-	unsigned int __length;
-	key_hook_t __callback;
-	int __mouse_x;
-	int __mouse_y;
-	unsigned int *__raw_pixels;
-	sixel_output_t *__output;
-	sixel_dither_t *__dither;
-};
 #endif
 
-#endif /* GUILIB_BACKEND_H */
+#endif /* GUILIB_H */

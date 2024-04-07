@@ -3,12 +3,15 @@
 
 #include <time.h>
 
-static inline long square(long x)
+#define square _square
+#define abs _abs
+
+static inline long _square(long x)
 {
 	return x * x;
 }
 
-static inline int abs(int x)
+static inline int _abs(int x)
 {
 	return x > 0 ? x : -x;
 }
