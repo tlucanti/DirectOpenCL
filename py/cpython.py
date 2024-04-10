@@ -2,12 +2,11 @@
 import ctypes
 import numpy as np
 
-#from TKwindow import TKwindow as Window
-from frontend.PILwindow import PILwindow as Window
+WindowConstructor = None
 
 @ctypes.CFUNCTYPE(ctypes.py_object, ctypes.c_uint, ctypes.c_uint, ctypes.c_void_p)
 def window_construct(width, height, winptr):
-    window = Window(width, height, winptr)
+    window = WindowConstructor(width, height, winptr)
     return window
 
 @ctypes.CFUNCTYPE(None, ctypes.py_object)
@@ -21,7 +20,7 @@ def window_draw(window, uptr):
     red = (pixels & 0xFF0000) >> 16
     green = (pixels & 0x00FF00) >> 8
     blue = pixels & 0x0000FF
-    image = np.stack([red, green, blue], axis=2)
+    image = np.stack([red, green, blue], axis=2, dtype=np.uint8)
 
     assert image.shape == (window.height(), window.width(), 3)
     window.draw(image)
@@ -42,8 +41,11 @@ def window_mouse(window, x_ptr, y_ptr):
     y_ptr[0] = y
 
 
-def main():
-    dll = ctypes.cdll.LoadLibrary('py/libbackend.so')
+def main(constructor, path):
+    global WindowConstructor
+
+    WindowConstructor = constructor
+    dll = ctypes.cdll.LoadLibrary(path)
 
     dll._set_PY_window_constructor(window_construct)
     dll._set_PY_window_destructor(window_destroy)
@@ -55,5 +57,3 @@ def main():
     dll.main()
     print('py: main done')
 
-if __name__ == '__main__':
-    main()

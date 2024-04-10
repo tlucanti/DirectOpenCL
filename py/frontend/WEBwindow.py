@@ -7,7 +7,7 @@ import cv2
 
 from .util.NetSock import TcpServer, UdpServer
 
-class WebWindow():
+class WEBwindow():
     def __init__(self, width, height, winid=None):
         self.__width = width
         self.__height = height
@@ -25,7 +25,7 @@ class WebWindow():
         self.event_socket = TcpServer(port=7777)
 
         self.event_socket.send('R', width, height)
-        self.event_socket.send('E', 'P')
+        self.event_socket.send('E', 'B1')
 
         self.__thread_obj = threading.Thread(target=self.__key_reader_thread)
         self.__thread_obj.start()
@@ -37,8 +37,8 @@ class WebWindow():
         return self.__height
 
     def draw(self, image):
-        frame = cv2.imencode('.jpg', image, (cv2.IMWRITE_JPEG_QUALITY, 100))[1].tobytes()
-        self.pix_socket.send(len(frame), frame)
+            frame = cv2.imencode('.jpg', image, (cv2.IMWRITE_JPEG_QUALITY, 100))[1].tobytes()
+            self.pix_socket.send(len(frame), frame)
 
     def key_hook(self, callback):
         self.__callback = callback

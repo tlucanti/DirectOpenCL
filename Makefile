@@ -19,19 +19,20 @@ CFLAGS += -D CONFIG_GUILIB_SIXEL_RAW_MODE=$(CONFIG_GUILIB_SIXEL_RAW_MODE)
 CFLAGS += -D CONFIG_GUILIB_SIXEL_KEYBOARD_ENABLE=$(CONFIG_GUILIB_SIXEL_KEYBOARD_ENABLE)
 CFLAGS += -D CONFIG_GUILIB_SIXEL_WARN_UNKNOWN_ESCAPE=$(CONFIG_GUILIB_SIXEL_WARN_UNKNOWN_ESCAPE)
 
-all: stream
+all: py
 
-py-build:
-	$(CC) $(PYFLAGS) -c py/backend.c -o py/backend.o
-	$(CC) $(PYFLAGS) -c src/stdguilib.c -o py/stdguilib.o
-	$(CC) $(PYFLAGS) -c test.c -o py/test.o
-	$(LD) -shared py/backend.o py/stdguilib.o py/test.o -o py/libbackend.so
+build:
+	mkdir -p build
 
-py-tkinter: py-build
-	cd py && python3 frontend.py
-
-py-pil: py-build
-	python3 py/cpython.py
+py-stdlib: build
+	$(CC) $(PYFLAGS) -c src/stdguilib.c -o build/stdguilib-py.o
+	ar rcs  build/libstdgui-py.a build/stdguilib-py.o
+py-lib: build
+	$(CC) $(PYFLAGS) -c py/backend.c -o build/backend-py.o
+	ar rcs build/libgui-py.a build/backend-py.o
+py: py-stdlib py-lib
+	$(CC) $(PYFLAGS) -c test.c -o build/test-py.o
+	$(LD) -shared build/test-py.o -o executable-py.so -L build -lgui-py -lstdgui-py
 
 sixlib:
 	$(CC) $(SIXFLAGS) -c sixel/sixel.c -o sixel/sixel.o

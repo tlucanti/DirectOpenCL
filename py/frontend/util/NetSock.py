@@ -1,5 +1,6 @@
 
 import socket
+import platform
 
 class TcpNetSock():
 	def __init__(self, fd):
@@ -86,6 +87,8 @@ class TcpServer(TcpNetSock):
 	def __init__(self, port, host='0.0.0.0'):
 		print(f'running TCP server at {host}:{port}')
 		self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		if platform.system() == 'Linux':
+			self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.soc.bind((host, port))
 		self.soc.listen(1)
 

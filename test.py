@@ -2,7 +2,7 @@
 
 #from py.frontend.TKwindow import TKwindow as Window
 #from py.frontend.PYGAMEwindow import PYGAMEwindow as Window
-from py.frontend.WEBwindow import WebWindow as Window
+from py.frontend.WEBwindow import WEBwindow as Window
 
 from py.api import *
 
