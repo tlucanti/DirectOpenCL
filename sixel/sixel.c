@@ -68,8 +68,6 @@ static void fps_relax(void)
 	long prev_ns = ts.tv_nsec;
 	float fps;
 
-	return;
-
 	do {
 		clock_gettime(CLOCK_MONOTONIC, &ts);
 		fps = 1.f / ((ts.tv_sec - prev_s) + (ts.tv_nsec - prev_ns) * 1e-9f);
