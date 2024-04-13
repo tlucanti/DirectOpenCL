@@ -20,63 +20,137 @@ CFLAGS += -D CONFIG_GUILIB_SIXEL_RAW_MODE=$(CONFIG_GUILIB_SIXEL_RAW_MODE)
 CFLAGS += -D CONFIG_GUILIB_SIXEL_KEYBOARD_ENABLE=$(CONFIG_GUILIB_SIXEL_KEYBOARD_ENABLE)
 CFLAGS += -D CONFIG_GUILIB_SIXEL_WARN_UNKNOWN_ESCAPE=$(CONFIG_GUILIB_SIXEL_WARN_UNKNOWN_ESCAPE)
 
+BRED     = "\033[01;31m"
+BGREEN   = "\033[01;32m"
+BYELLOW  = "\033[01;33m"
+BBLUE    = "\033[01;34m"
+BMAGENTA = "\033[01;35m"
+BCYAN    = "\033[01;36m"
+BORANGE  = "\033[38;2;255;165;0m"
+BRESET   = "\033[0m"
+
+MK_P = printf $(BYELLOW)'MK\t'$(BRESET); echo
+CC_P = printf $(BGREEN)'CC\t'$(BRESET); echo
+AR_P = printf $(BMAGENTA)'AR\t'$(BRESET); echo
+LD_P = printf $(BCYAN)'LD\t'$(BRESET); echo
+ELF_P = printf $(BBLUE)'ELF\t'$(BRESET); echo
+RM_P = printf $(BRED)'RM\t'$(BRESET); echo
+
 all: lib sixel-test stream-test
 
 lib: py sixel stream
 
-clean:
-	rm -rf build
-	rm -f executable-py.so
-	rm -f guisixel
-	rm -f guistream
-	rm -f libgui-sixel.a
-	rm -f libgui-stream.a
-	rm -f libstdgui.a
+clean: py-stdgui-clean py-lib-clean py-clean stdgui-clean sixel-clean stream-clean sixel-test-clean stream-test-clean
 
 build:
-	mkdir -p build
+	@$(MK_P) build
+	@mkdir -p build
 
 py-stdgui: build
-	$(CC) $(PYFLAGS) -c src/stdguilib.c -o build/stdguilib-py.o
-	$(AR)  build/libstdgui-py.a build/stdguilib-py.o
+	@$(CC_P) stdguilib-py.o
+	@$(CC) $(PYFLAGS) -c src/stdguilib.c -o build/stdguilib-py.o
+	@$(AR_P) libstdgui-py.a
+	@$(AR)  build/libstdgui-py.a build/stdguilib-py.o
+
+py-stdgui-clean:
+	@$(RM_P) stdguilib-py.o
+	@rm -f build/stdguilib-py.o
+	@$(RM_P) libstdgui-py.a
+	@rm -f build/libstdgui-py.a
 
 py-lib: build
-	$(CC) $(PYFLAGS) -c py/backend.c -o build/backend-py.o
-	$(AR) build/libgui-py.a build/backend-py.o
+	@$(CC_P) backend-py.o
+	@$(CC) $(PYFLAGS) -c py/backend.c -o build/backend-py.o
+	@$(AR_P) libgui-py.a
+	@$(AR) build/libgui-py.a build/backend-py.o
+
+py-lib-clean:
+	@$(RM_P) backend-py.o
+	@rm -f build/backend-py.o
+	@$(RM_P) libgui-py.a
+	@rm -f build/libgui-py.a
 
 py: py-stdgui py-lib
-	$(CC) $(PYFLAGS) -c test.c -o build/test-py.o
-	$(LD) -shared build/test-py.o -o executable-py.so -L build -lgui-py -lstdgui-py
+	@$(CC_P) test-py.o
+	@$(CC) $(PYFLAGS) -c test.c -o build/test-py.o
+	@$(LD_P) executable-py.so
+	@$(LD) -shared build/test-py.o -o executable-py.so -L build -lgui-py -lstdgui-py
+
+py-clean:
+	@$(RM_P) test-py.o
+	@rm -f build/test-py.o
+	@$(RM_P) executable-py.so
+	@rm -f executable-py.so
 
 stdgui: build
-	$(CC) $(CFLAGS) -c src/stdguilib.c -o build/stdguilib.o
-	$(AR) libstdgui.a build/stdguilib.o
+	@$(CC_P) stdguilib.o
+	@$(CC) $(CFLAGS) -c src/stdguilib.c -o build/stdguilib.o
+	@$(AR_P) stdguilib.o
+	@$(AR) libstdgui.a build/stdguilib.o
+
+stdgui-clean:
+	@$(RM_P) stdguilib.o
+	@rm -f build/stdguilib.o
+	@$(RM_P) libstdgui.a
+	@rm -f libstdgui.a
 
 sixel: stdgui
-	$(CC) $(SIXFLAGS) -c sixel/sixel.c -o build/sixel.o
-	$(AR) libgui-sixel.a build/sixel.o
+	@$(CC_P) sixel.o
+	@$(CC) $(SIXFLAGS) -c sixel/sixel.c -o build/sixel.o
+	@$(AR_P) sixel.o
+	@$(AR) libgui-sixel.a build/sixel.o
 .PHONY: sixel
 
+sixel-clean:
+	@$(RM_P) sixel.o
+	@rm -f build/sixel.o
+	@$(RM_P) libgui-sixel.a
+	@rm -f libgui-sixel.a
+
 stream: stdgui
-	$(CC) $(STREAMFLAGS) -c stream/encode.c -o build/encode.o
-	$(CC) $(STREAMFLAGS) -c stream/netsock.c -o build/netsock.o
-	$(CC) $(STREAMFLAGS) -c stream/stream.c -o build/stream.o
-	$(AR) libgui-stream.a build/encode.o build/netsock.o build/stream.o
+	@$(CC_P) encode.o
+	@$(CC) $(STREAMFLAGS) -c stream/encode.c -o build/encode.o
+	@$(CC_P) netsock.o
+	@$(CC) $(STREAMFLAGS) -c stream/netsock.c -o build/netsock.o
+	@$(CC_P) stream.o
+	@$(CC) $(STREAMFLAGS) -c stream/stream.c -o build/stream.o
+	@$(AR_P) libgui-stream.a
+	@$(AR) libgui-stream.a build/encode.o build/netsock.o build/stream.o
 .PHONY: stream
 
+stream-clean:
+	@$(RM_P) encode.o
+	@rm -f build/encode.o
+	@$(RM_P) netsock.o
+	@rm -f build/netsock.o
+	@$(RM_P) stream.o
+	@rm -f build/stream.o
+	@$(RM_P) libgui-stream.a
+	@rm -f build/libgui-stream.a
+
 sixel-test: sixel
-	$(CC) $(CFLAGS) -L . \
+	@$(ELF_P) guisixel.elf
+	@$(CC) $(CFLAGS) -L . \
 		test.c \
-		-o guisixel \
+		-o guisixel.elf \
 		-lgui-sixel -lstdgui \
 		\
 		-L thirdparty -lsixel
 
+sixel-test-clean:
+	@$(RM_P) guisixel.elf
+	@rm -f guisixel.elf
+
 stream-test: stream
-	$(CC) $(CFLAGS) -L . \
+	@$(ELF_P) guistream
+	@$(CC) $(CFLAGS) -L . \
 		test.c \
-		-o guistream \
+		-o guistream.elf \
 		-lgui-stream -lstdgui \
 		\
 		-ljpeg
+
+stream-test-clean:
+	@$(RM_P) guistream.elf
+	@rm -f guistream.elf
 

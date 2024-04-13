@@ -2,10 +2,10 @@
 *.o
 *.so
 *.a
+*elf
 __pycache__
 *.jpg
 *.png
 compile_commands.json
 .cache
-/guisixel
-/guistream
+
