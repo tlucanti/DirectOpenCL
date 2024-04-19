@@ -125,3 +125,220 @@ class GUIwindow():
         None
         """
         pass
+
+
+MOUSE_LEFT      = 0
+MOUSE_RIGHT     = 1
+MOUSE_MIDDLE    = 2
+MOUSE_4         = 4
+MOUSE_5         = 5
+MOUSE_6         = 6
+MOUSE_7         = 7
+
+SCROLL_UP   = 64
+SCROLL_DOWN = 65
+
+KEY_0 = ord('0')
+KEY_1 = ord('1')
+KEY_2 = ord('2')
+KEY_3 = ord('3')
+KEY_4 = ord('4')
+KEY_5 = ord('5')
+KEY_6 = ord('6')
+KEY_7 = ord('7')
+KEY_8 = ord('8')
+KEY_9 = ord('9')
+
+KEY_A = ord('a')
+KEY_B = ord('b')
+KEY_C = ord('c')
+KEY_D = ord('d')
+KEY_E = ord('e')
+KEY_F = ord('f')
+KEY_G = ord('g')
+KEY_H = ord('h')
+KEY_I = ord('i')
+KEY_J = ord('j')
+KEY_K = ord('k')
+KEY_L = ord('l')
+KEY_M = ord('m')
+KEY_N = ord('n')
+KEY_O = ord('o')
+KEY_P = ord('p')
+KEY_Q = ord('q')
+KEY_R = ord('r')
+KEY_S = ord('s')
+KEY_T = ord('t')
+KEY_U = ord('u')
+KEY_V = ord('v')
+KEY_W = ord('w')
+KEY_X = ord('x')
+KEY_Y = ord('y')
+KEY_Z = ord('z')
+
+KEY_ESCAPE      = 27
+KEY_DELETE      = 127
+KEY_BACKQUOTE   = ord('`')
+KEY_MINUS       = ord('-')
+KEY_EQUAL       = ord('=')
+KEY_BACKSPACE   = 8
+KEY_LEFTBRACE   = ord('[')
+KEY_RIGHTBRACE  = ord(']')
+KEY_BACKSLASH   = ord('\\')
+KEY_SEMICOLON   = ord(';')
+KEY_QUOTE       = ord('\'')
+KEY_ENTER       = ord('\n')
+KEY_COMA        = ord(',')
+KEY_POINT       = ord('.')
+KEY_SLASH       = ord('/')
+KEY_SPACE       = ord(' ')
+
+KEY_RIGHT = 128
+KEY_LEFT = 129
+KEY_UP = 130
+KEY_DOWN = 131
+
+KEY_TAB = ord('\t')
+KEY_CAPS = 132
+KEY_LSHIFT = 133
+KEY_LCTRL = 134
+KEY_LSUPER = 135
+KEY_LALT = 136
+KEY_RSHIFT = 137
+KEY_RCTRL = 138
+KEY_RSUPER = 139
+KEY_RALT = 140
+
+KEY_F1 = 141
+KEY_F2 = 142
+KEY_F3 = 143
+KEY_F4 = 144
+KEY_F5 = 145
+KEY_F6 = 146
+KEY_F7 = 147
+KEY_F8 = 148
+KEY_F9 = 149
+KEY_F10 = 150
+KEY_F11 = 151
+KEY_F12 = 152
+KEY_F13 = 153
+KEY_F14 = 154
+KEY_F15 = 155
+KEY_F16 = 156
+KEY_F17 = 157
+KEY_F18 = 158
+KEY_F19 = 159
+
+KEY_NUM_0 = 160
+KEY_NUM_1 = 161
+KEY_NUM_2 = 162
+KEY_NUM_3 = 163
+KEY_NUM_4 = 164
+KEY_NUM_5 = 165
+KEY_NUM_6 = 166
+KEY_NUM_7 = 167
+KEY_NUM_8 = 168
+KEY_NUM_9 = 169
+
+KEY_NAMES = {
+    MOUSE_LEFT: 'MOUSE LEFT',
+    MOUSE_RIGHT: 'MOUSE RIGHT',
+    MOUSE_MIDDLE: 'MOUSE MIDDLE',
+    MOUSE_4: 'MOUSE 4',
+    MOUSE_5: 'MOUSE 5',
+    MOUSE_6: 'MOUSE 6',
+    MOUSE_7: 'MOUSE 7',
+
+    SCROLL_UP: 'SCROLL UP',
+    SCROLL_DOWN: 'SCROLL DOWN',
+
+    KEY_0: '0',
+    KEY_1: '1',
+    KEY_2: '2',
+    KEY_3: '3',
+    KEY_4: '4',
+    KEY_5: '5',
+    KEY_6: '6',
+    KEY_7: '7',
+    KEY_8: '8',
+    KEY_9: '9',
+
+    KEY_A: 'a',
+    KEY_B: 'b',
+    KEY_C: 'c',
+    KEY_D: 'd',
+    KEY_E: 'e',
+    KEY_F: 'f',
+    KEY_G: 'g',
+    KEY_H: 'h',
+    KEY_I: 'i',
+    KEY_J: 'j',
+    KEY_K: 'k',
+    KEY_L: 'l',
+    KEY_M: 'm',
+    KEY_N: 'n',
+    KEY_O: 'o',
+    KEY_P: 'p',
+    KEY_Q: 'q',
+    KEY_R: 'r',
+    KEY_S: 's',
+    KEY_T: 't',
+    KEY_U: 'u',
+    KEY_V: 'v',
+    KEY_W: 'w',
+    KEY_X: 'x',
+    KEY_Y: 'y',
+    KEY_Z: 'z',
+
+    KEY_ESCAPE: 'ESC',
+    KEY_DELETE: 'DEL',
+    KEY_BACKQUOTE: '`',
+    KEY_MINUS: '-',
+    KEY_EQUAL: '=',
+    KEY_BACKSPACE: 'BACKSPACE',
+    KEY_LEFTBRACE: '[',
+    KEY_RIGHTBRACE: ']',
+    KEY_BACKSLASH: '\\',
+    KEY_SEMICOLON: ';',
+    KEY_QUOTE: '\'',
+    KEY_COMA: ',',
+    KEY_POINT: '.',
+    KEY_SLASH: '/',
+    KEY_SPACE: 'SPACE',
+
+    KEY_RIGHT: 'RIGHT',
+    KEY_LEFT: 'LEFT',
+    KEY_UP: 'UP',
+    KEY_DOWN: 'DOWN',
+
+    KEY_TAB: 'TAB',
+    KEY_CAPS: 'CAPS',
+    KEY_LSHIFT: 'LSHIFT',
+    KEY_LCTRL: 'RSHIFT',
+    KEY_LSUPER: 'LWIN',
+    KEY_LALT: 'LALT',
+    KEY_RSHIFT: 'RSHIFT',
+    KEY_RCTRL: 'RCTRL',
+    KEY_RSUPER: 'RWIN',
+    KEY_RALT: 'RALT',
+
+    KEY_F1: 'F1',
+    KEY_F2: 'F2',
+    KEY_F3: 'F3',
+    KEY_F4: 'F4',
+    KEY_F5: 'F5',
+    KEY_F6: 'F6',
+    KEY_F7: 'F7',
+    KEY_F8: 'F8',
+    KEY_F9: 'F9',
+    KEY_F10: 'F10',
+    KEY_F11: 'F11',
+    KEY_F12: 'F12',
+    KEY_F13: 'F13',
+    KEY_F14: 'F14',
+    KEY_F15: 'F15',
+    KEY_F16: 'F16',
+    KEY_F17: 'F17',
+    KEY_F18: 'F18',
+    KEY_F19: 'F19',
+}

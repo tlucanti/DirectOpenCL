@@ -8,6 +8,7 @@ from .NetSock import TcpClient, UdpClient
 
 def time_report(names, times):
     assert len(names) + 1 == len(times)
+    return
 
     total = times[-1] - times[0]
     for i in range(len(names)):

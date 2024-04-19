@@ -13,10 +13,6 @@ keycode_dict = {
     1: 0, # Left mouse -> 0
     2: 3, # middle mouse -> 3
     3: 2, # right mouse -> 2
-    ord('W'): ord('w'),
-    ord('A'): ord('a'),
-    ord('S'): ord('s'),
-    ord('D'): ord('d'),
 }
 
 class TKwindow(GUIwindow):
