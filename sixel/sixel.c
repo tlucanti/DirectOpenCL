@@ -315,10 +315,10 @@ static void *key_reader_thread(void *arg)
 					// mouse move
 					break;
 				case 64:
-					key_callback(MOUSE_SCROLL_UP, true);
+					key_callback(SCROLL_UP, true);
 					break;
 				case 65:
-					key_callback(MOUSE_SCROLL_DOWN, true);
+					key_callback(SCROLL_DOWN, true);
 					break;
 				default:
 					WANR_UNKNOWN_ESCAPE();

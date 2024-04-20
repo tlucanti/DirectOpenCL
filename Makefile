@@ -51,48 +51,56 @@ py-stdgui: build
 	@$(CC) $(PYFLAGS) -c src/stdguilib.c -o build/stdguilib-py.o
 	@$(AR_P) libstdgui-py.a
 	@$(AR)  build/libstdgui-py.a build/stdguilib-py.o
+.PHONY: py-stdgui
 
 py-stdgui-clean:
 	@$(RM_P) stdguilib-py.o
 	@rm -f build/stdguilib-py.o
 	@$(RM_P) libstdgui-py.a
 	@rm -f build/libstdgui-py.a
+.PHONY: py-stdgui-clean
 
 py-lib: build
 	@$(CC_P) backend-py.o
 	@$(CC) $(PYFLAGS) -c py/backend.c -o build/backend-py.o
 	@$(AR_P) libgui-py.a
 	@$(AR) build/libgui-py.a build/backend-py.o
+.PHONY: py-lib
 
 py-lib-clean:
 	@$(RM_P) backend-py.o
 	@rm -f build/backend-py.o
 	@$(RM_P) libgui-py.a
 	@rm -f build/libgui-py.a
+.PHONY: py-lib-clean
 
 py: py-stdgui py-lib
 	@$(CC_P) test-py.o
 	@$(CC) $(PYFLAGS) -c test.c -o build/test-py.o
 	@$(LD_P) executable-py.so
 	@$(LD) -shared build/test-py.o -o executable-py.so -L build -lgui-py -lstdgui-py
+.PHONY: py
 
 py-clean:
 	@$(RM_P) test-py.o
 	@rm -f build/test-py.o
 	@$(RM_P) executable-py.so
 	@rm -f executable-py.so
+.PHONY: py-clean
 
 stdgui: build
 	@$(CC_P) stdguilib.o
 	@$(CC) $(CFLAGS) -c src/stdguilib.c -o build/stdguilib.o
 	@$(AR_P) stdguilib.o
 	@$(AR) libstdgui.a build/stdguilib.o
+.PHONY: stdgui
 
 stdgui-clean:
 	@$(RM_P) stdguilib.o
 	@rm -f build/stdguilib.o
 	@$(RM_P) libstdgui.a
 	@rm -f libstdgui.a
+.PHONY: stdgui-clean
 
 sixel: stdgui
 	@$(CC_P) sixel.o
@@ -106,6 +114,7 @@ sixel-clean:
 	@rm -f build/sixel.o
 	@$(RM_P) libgui-sixel.a
 	@rm -f libgui-sixel.a
+.PHONY: sixel-clean
 
 stream: stdgui
 	@$(CC_P) encode.o
@@ -127,6 +136,7 @@ stream-clean:
 	@rm -f build/stream.o
 	@$(RM_P) libgui-stream.a
 	@rm -f build/libgui-stream.a
+.PHONY: stream-clean
 
 sixel-test: sixel
 	@$(ELF_P) guisixel.elf
@@ -136,21 +146,25 @@ sixel-test: sixel
 		-lgui-sixel -lstdgui \
 		\
 		-L thirdparty -lsixel
+.PHONY: sixel-test
 
 sixel-test-clean:
 	@$(RM_P) guisixel.elf
 	@rm -f guisixel.elf
+.PHONY: sixel-test-clean
 
 stream-test: stream
-	@$(ELF_P) guistream
+	@$(ELF_P) guistream.elf
 	@$(CC) $(CFLAGS) -L . \
 		test.c \
 		-o guistream.elf \
 		-lgui-stream -lstdgui \
 		\
 		-ljpeg
+.PHONY: stream-test
 
 stream-test-clean:
 	@$(RM_P) guistream.elf
 	@rm -f guistream.elf
+.PHONY: stream-test-clean
 

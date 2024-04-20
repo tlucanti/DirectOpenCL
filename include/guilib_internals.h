@@ -58,12 +58,14 @@ static __always_inline void __gui_perror(const char *function, const char *messa
         } else {
                 perror(message);
         }
+        errno = 0;
 }
 
 __cold __noret
 static inline void __gui_panic(const char *file, const char *function, unsigned long line, const char *message)
 {
-        fprintf(stderr, "\n%s:%lu: GUILIB PANIC\n%s: ", file, line, function);
+        fflush(stdout);
+        fprintf(stderr, "%s:%lu: GUILIB PANIC\n%s: ", file, line, function);
         perror(message);
         abort();
 }

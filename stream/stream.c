@@ -84,7 +84,7 @@ static void *key_reader_thread(void *winptr)
                 case 'M':
                           window->mouse_x = soc_recv_number(&window->event_socket);
                           window->mouse_y = soc_recv_number(&window->event_socket);
-                          //printf("server: mouse at %d:%d\n", window->__mouse_x, window->__mouse_y);
+                          printf("server: mouse at %d:%d\n", window->mouse_x, window->mouse_y);
                           window->waiting_for_mouse = false;
                           break;
                 default:

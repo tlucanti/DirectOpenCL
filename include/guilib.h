@@ -79,57 +79,62 @@ void gui_wfi(struct gui_window *window);
 #define KEY_SEMICOLON ';'
 #define KEY_QUOTE '\''
 #define KEY_ENTER '\n'
-#define KEY_COMA = ','
+#define KEY_COMA ','
 #define KEY_POINT '.'
 #define KEY_SLASH '/'
 #define KEY_SPACE ' '
 
-#define KEY_RIGHT = 128
-#define KEY_LEFT = 129
-#define KEY_UP = 130
-#define KEY_DOWN = 131
+#define KEY_RIGHT 128
+#define KEY_LEFT 129
+#define KEY_UP 130
+#define KEY_DOWN 131
 
-#define KEY_TAB = '\t'
-#define KEY_CAPS = 132
-#define KEY_LSHIFT = 133
-#define KEY_LCTRL = 134
-#define KEY_LWIN = 135
-#define KEY_LALT = 136
-#define KEY_RSHIFT = 137
-#define KEY_RCTRL = 138
-#define KEY_RWIN = 139
-#define KEY_RALT = 140
+#define KEY_TAB '\t'
+#define KEY_CAPS 132
+#define KEY_LSHIFT 133
+#define KEY_LCTRL 134
+#define KEY_LWIN 135
+#define KEY_LALT 136
+#define KEY_RSHIFT 137
+#define KEY_RCTRL 138
+#define KEY_RWIN 139
+#define KEY_RALT 140
 
-#define KEY_F1 = 141
-#define KEY_F2 = 142
-#define KEY_F3 = 143
-#define KEY_F4 = 144
-#define KEY_F5 = 145
-#define KEY_F6 = 146
-#define KEY_F7 = 147
-#define KEY_F8 = 148
-#define KEY_F9 = 149
-#define KEY_F10 = 150
-#define KEY_F11 = 151
-#define KEY_F12 = 152
-#define KEY_F13 = 153
-#define KEY_F14 = 154
-#define KEY_F15 = 155
-#define KEY_F16 = 156
-#define KEY_F17 = 157
-#define KEY_F18 = 158
-#define KEY_F19 = 159
+#define KEY_F1 141
+#define KEY_F2 142
+#define KEY_F3 143
+#define KEY_F4 144
+#define KEY_F5 145
+#define KEY_F6 146
+#define KEY_F7 147
+#define KEY_F8 148
+#define KEY_F9 149
+#define KEY_F10 150
+#define KEY_F11 151
+#define KEY_F12 152
+#define KEY_F13 153
+#define KEY_F14 154
+#define KEY_F15 155
+#define KEY_F16 156
+#define KEY_F17 157
+#define KEY_F18 158
+#define KEY_F19 159
 
-#define KEY_NUM_0 = 160
-#define KEY_NUM_1 = 161
-#define KEY_NUM_2 = 162
-#define KEY_NUM_3 = 163
-#define KEY_NUM_4 = 164
-#define KEY_NUM_5 = 165
-#define KEY_NUM_6 = 166
-#define KEY_NUM_7 = 167
-#define KEY_NUM_8 = 168
-#define KEY_NUM_9 = 169
+#define KEY_NUM_0 160
+#define KEY_NUM_1 161
+#define KEY_NUM_2 162
+#define KEY_NUM_3 163
+#define KEY_NUM_4 164
+#define KEY_NUM_5 165
+#define KEY_NUM_6 166
+#define KEY_NUM_7 167
+#define KEY_NUM_8 168
+#define KEY_NUM_9 169
+
+#define KEY_NUM_DOWN KEY_NUM_2
+#define KEY_NUM_LEFT KEY_NUM_4
+#define KEY_NUM_RIGHT KEY_NUM_6
+#define KEY_NUM_UP KEY_NUM_8
 
 #define MOUSE_LEFT 0
 #define MOUSE_RIGHT 1
