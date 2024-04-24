@@ -16,6 +16,12 @@ struct gui_window {
         unsigned *raw_pixels;
         struct soc_stream event_socket;
         struct soc_stream pix_socket;
+        pthread_t callback_thread;
+        pthread_spinlock_t callback_lock;
+        volatile int callback_key;
+        volatile bool callback_pressed;
+        volatile bool has_pending_callback;
+        volatile bool callback_executor_run;
         unsigned int width;
         unsigned int height;
         unsigned long length;
@@ -23,9 +29,9 @@ struct gui_window {
         int mouse_y;
         key_hook_t callback;
         pthread_t key_thread;
-        bool waiting_for_mouse;
-        bool waiting_for_interrupt;
-        bool key_reader_run;
+        volatile bool key_reader_run;
+        volatile bool waiting_for_mouse;
+        volatile bool waiting_for_interrupt;
 };
 
 static int g_event_server;
@@ -62,10 +68,39 @@ static void sig_handler(int sig)
         }
 }
 
+static void *callback_executor_thread(void *winptr)
+{
+        struct gui_window *window = winptr;
+        int key;
+        bool pressed;
+
+        while (window->callback_executor_run) {
+                pthread_spin_lock(&window->callback_lock);
+                if (window->has_pending_callback) {
+                        key = window->callback_key;
+                        pressed = window->callback_pressed;
+                        window->has_pending_callback = false;
+                        pthread_spin_unlock(&window->callback_lock);
+                        window->callback(window, key, pressed);
+                } else {
+                        pthread_spin_unlock(&window->callback_lock);
+                        usleep(10000);
+                }
+        }
+
+        return NULL;
+}
+
 static void *key_reader_thread(void *winptr)
 {
         struct gui_window *window = winptr;
         char event;
+
+        window->callback_executor_run = true;
+        pthread_spin_init(&window->callback_lock, false);
+        if (pthread_create(&window->callback_thread, NULL, callback_executor_thread, winptr)) {
+                gui_panic("callback_executor thread spawn fail");
+        }
 
         while (window->key_reader_run) {
                 event = soc_recv_char(&window->event_socket);
@@ -77,14 +112,26 @@ static void *key_reader_thread(void *winptr)
                         int key = soc_recv_number(&window->event_socket);
                         printf("server: key %d %s\n", key, pressed ? "pressed" : "released");
                         if (window->callback != NULL) {
-                                window->callback(window, key, pressed);
+                                while (true) {
+                                        pthread_spin_lock(&window->callback_lock);
+                                        if (window->has_pending_callback) {
+                                                pthread_spin_unlock(&window->callback_lock);
+                                                continue;
+                                        }
+                                        window->callback_key = key;
+                                        window->callback_pressed = pressed;
+                                        window->has_pending_callback = true;
+
+                                        pthread_spin_unlock(&window->callback_lock);
+                                        break;
+                                }
                         }
                         break;
                 }
                 case 'M':
                           window->mouse_x = soc_recv_number(&window->event_socket);
                           window->mouse_y = soc_recv_number(&window->event_socket);
-                          printf("server: mouse at %d:%d\n", window->mouse_x, window->mouse_y);
+                          // printf("server: mouse at %d:%d\n", window->mouse_x, window->mouse_y);
                           window->waiting_for_mouse = false;
                           break;
                 default:
@@ -92,6 +139,9 @@ static void *key_reader_thread(void *winptr)
                 }
                 window->waiting_for_interrupt = false;
         }
+
+        window->callback_executor_run = false;
+        pthread_join(window->callback_executor_run, NULL);
         return NULL;
 }
 
@@ -255,14 +305,14 @@ int gui_draw(struct gui_window *window)
                 encoded = temp;
         } else if (COMPRESSION_TYPE == 1) {
 		if (create_jpg(&encoded, &encoded_size, temp, window->width,
-			   window->height, QUALITY)) {
-                        gui_perror("jpeg compression fail");
+			       window->height, QUALITY)) {
+			gui_perror("jpeg compression fail");
                         free(encoded);
                         return EFAULT;
-                }
+		}
 	}
 
-        printf("encoded size %lu\n", encoded_size);
+        // printf("encoded size %lu\n", encoded_size);
         soc_send_number(&window->pix_socket, encoded_size);
 	soc_send(&window->pix_socket, encoded, encoded_size);
         soc_send_flush(&window->pix_socket);
@@ -298,4 +348,3 @@ void gui_wfi(struct gui_window *window)
                 usleep(10000);
         }
 }
-
