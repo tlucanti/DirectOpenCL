@@ -32,6 +32,9 @@ static void callback(struct gui_window *window, int keycode, bool pressed)
 			mouse1 = pressed;
 			break;
 	}
+
+	int i;
+	gui_mouse(window, &i, &i);
 }
 
 int main()
@@ -41,7 +44,7 @@ int main()
 	int mx1, my1, mx2, my2;
 
 	gui_bootstrap();
-        window = gui_alloc();
+	window = gui_alloc();
 	gui_create(window, width, height);
 	gui_key_hook(window, callback);
 
@@ -67,7 +70,7 @@ int main()
 		gui_draw(window);
 
 		//printf("\rfps: %f\t", gui_get_fps());
-                //fflush(stdout);
+		//fflush(stdout);
 	}
 }
 

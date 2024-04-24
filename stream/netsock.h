@@ -3,11 +3,11 @@
 #define GUILIB_NETSOCK_H
 
 struct soc_stream {
-        int socket;
-        unsigned out_occupied;
-        // unsigned in_occupied;
-        char out_buff[1024];
-        // char in_buff[1024];
+	int socket;
+	unsigned out_occupied;
+	// unsigned in_occupied;
+	char out_buff[1024];
+	// char in_buff[1024];
 };
 
 int soc_create_server(unsigned short port);

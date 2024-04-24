@@ -97,8 +97,8 @@ int main()
 	free(row_pointer);
 
 	for (unsigned long i = 0; i < decoded_size; i++) {
-                printf("%d ", decoded[i]);
-        }
-        printf("\n");
+		printf("%d ", decoded[i]);
+	}
+	printf("\n");
 }
 
