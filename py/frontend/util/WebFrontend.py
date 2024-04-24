@@ -42,15 +42,16 @@ class WebFrontend():
 
         threading.Thread(target=self.__draw_thread, args=[pix_socket]).start()
 
+        self.__mouse = None
         while True:
-            event = self.__event_socket.recv_char()
-            if event == 'm':
-                x, y = self.__frontend.mouse()
-                self.__event_socket.send('M', x, y)
-            else:
-                print(f'client: unknown event {event}')
+            xy = self.__frontend.mouse()
+            if self.__mouse != xy:
+                self.__mouse = xy
+                self.__event_socket.send('M', xy[0], xy[1])
+            time.sleep(5e-2)
 
     def __draw_thread(self, pix_socket):
+        frame = 0
         if self.__encoding == 'B1':
             while True:
                 start = time.time()
@@ -61,14 +62,16 @@ class WebFrontend():
                 recv = time.time()
 
                 data = np.frombuffer(data, np.uint8)
+                alloc = time.time()
                 img = cv2.imdecode(data, cv2.IMREAD_COLOR)
                 decode = time.time()
 
                 self.__frontend.draw(img)
                 draw = time.time()
 
-                time_report(['recv', 'decode', 'draw'], [start, recv, decode, draw])
-
+                time_report(['recv', 'alloc', 'decode', 'draw'], [start, recv, alloc, decode, draw])
+                frame += 1
+                print('frame', frame)
         elif self.__encoding == 'B0':
             while True:
                 start = time.time()
@@ -89,4 +92,5 @@ class WebFrontend():
 
     def __key_callback(self, winid, keycode, pressed):
         event = 'K' if pressed else 'k'
+        print('SEND', event, keycode)
         self.__event_socket.send(event, keycode)

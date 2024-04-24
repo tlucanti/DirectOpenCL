@@ -2,7 +2,7 @@
 
 #from py.frontend.TKwindow import TKwindow as Window
 #from py.frontend.PYGAMEwindow import PYGAMEwindow as Window
-from py.frontend.WEBwindow import WebWindow as Window
+from py.frontend.WEBwindow import WEBwindow as Window
 
 from py.api import *
 
@@ -43,8 +43,9 @@ def main():
 	gui_key_hook(window, callback)
 	#gui_key_hook(window, test_callback)
 
+	frame = 0
 	while True:
-		# print('\rfps\t`	', gui_get_fps(), end='')
+		print('\rfps\t`	', gui_get_fps(), end='')
 
 		gui_draw_circle(window, x, y, 40, COLOR_BLACK)
 		x = (x + dx + width) % width
@@ -58,6 +59,8 @@ def main():
 		my2 = my1
 
 		gui_draw(window)
+		frame += 1
+		print('sending frame', frame)
 
 if __name__ == '__main__':
 	main()

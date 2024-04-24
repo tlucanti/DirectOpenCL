@@ -125,8 +125,6 @@ keycode_dict[1105] = KEY_BACKQUOTE
 keycode_dict[13] = KEY_ENTER
 keycode_dict[10] = KEY_ENTER
 
-print(keycode_dict)
-
 class PYGAMEwindow(GUIwindow):
 	def __init__(self, width, height, winid=None):
 		if winid is None:
@@ -175,24 +173,25 @@ class PYGAMEwindow(GUIwindow):
 			if event.type == pygame.MOUSEMOTION:
 				continue
 
-			# print('\t\t', event)
 			if event.type == pygame.QUIT:
 				break
 			elif event.type == pygame.KEYDOWN:
-				if self.__callback:
-					key = keycode_dict[event.key]
-					self.__callback(self.__winid, key, True)
+				key = keycode_dict[event.key]
+				pressed = True
 			elif event.type == pygame.KEYUP:
-				if self.__callback:
-					key = keycode_dict[event.key]
-					self.__callback(self.__winid, key, False)
+				key = keycode_dict[event.key]
+				pressed = False
 			elif event.type == pygame.MOUSEBUTTONDOWN:
-				if self.__callback:
-					key = keycode_dict[event.button]
-					self.__callback(self.__winid, key, True)
+				key = keycode_dict[event.button]
+				pressed = True
 			elif event.type == pygame.MOUSEBUTTONUP:
 				if event.button in (pygame.BUTTON_WHEELUP, pygame.BUTTON_WHEELDOWN):
 					continue
-				if self.__callback:
-					key = keycode_dict[event.button]
-					self.__callback(self.__winid, key, False)
+				key = keycode_dict[event.button]
+				pressed = False
+			else:
+				continue
+
+			print(key, pressed)
+			if self.__callback is not None:
+				self.__callback(self.__winid, key, pressed)
