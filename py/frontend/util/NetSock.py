@@ -23,7 +23,7 @@ class TcpNetSock():
 
         return ret
 
-    def send(self, *args, atomic=True):
+    def send(self, *args):
         packet = b''
         for a in args:
             if isinstance(a, int):

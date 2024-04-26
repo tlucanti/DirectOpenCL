@@ -154,15 +154,12 @@ class PYGAMEwindow(GUIwindow):
     def draw(self, image):
         #assert image.shape == (self.height(), self.width(), 3)
 
-        pygame.surfarray.pixels3d(self.__surface)[:] = image.transpose(1, 0, 2)
-        self.__screen.blit(self.__surface, (0, 0))
+        pygame.surfarray.pixels3d(self.__screen)[:] = image.transpose(1, 0, 2)
         pygame.display.flip()
 
     def __main_loop(self, width, height):
         pygame.init()
         pygame.display.set_caption("pygame")
-
-        self.__surface = pygame.Surface((width, height))
 
         self.__screen = pygame.display.set_mode((width, height))
         self.__started = True

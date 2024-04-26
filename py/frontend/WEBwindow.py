@@ -66,6 +66,5 @@ class WEBwindow():
                 self.__mouse_x = self.event_socket.recv_number()
                 self.__mouse_y = self.event_socket.recv_number()
                 print(f'client: mouse at {self.__mouse_x}:{self.__mouse_y}')
-                self.__waiting_for_mouse = False
             else:
                 print(f'client: unknown event: {event}')

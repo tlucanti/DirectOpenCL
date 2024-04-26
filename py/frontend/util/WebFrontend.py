@@ -2,13 +2,14 @@
 import numpy as np
 import time
 import threading
-import cv2
+import io
+
+from PIL import Image
 
 from .NetSock import TcpClient, UdpClient
 
 def time_report(names, times):
     assert len(names) + 1 == len(times)
-    return
 
     total = times[-1] - times[0]
     for i in range(len(names)):
@@ -50,28 +51,48 @@ class WebFrontend():
                 self.__event_socket.send('M', xy[0], xy[1])
             time.sleep(5e-2)
 
+    def __to_numpy(self, im, buffer):
+        im.load()
+        # unpack data
+        e = Image._getencoder(im.mode, 'raw', im.mode)
+        e.setimage(im.im)
+
+        mem = buffer.data.cast('B', (buffer.data.nbytes,))
+
+        bufsize, s, offset = 65536, 0, 0
+        while not s:
+            l, s, d = e.encode(bufsize)
+            mem[offset:offset + len(d)] = d
+            offset += len(d)
+        if s < 0:
+            raise RuntimeError("encoder error %d in tobytes" % s)
+
     def __draw_thread(self, pix_socket):
-        frame = 0
+        frames = 0
         if self.__encoding == 'B1':
+            buffer = np.empty((self.__height, self.__width, 3), dtype=np.uint8)
             while True:
+                frames += 1
                 start = time.time()
 
                 size = pix_socket.recv_number()
                 data = pix_socket.do_recv(size)
                 assert len(data) == size
                 recv = time.time()
+                if frames % 2:
+                    continue
 
-                data = np.frombuffer(data, np.uint8)
-                alloc = time.time()
-                img = cv2.imdecode(data, cv2.IMREAD_COLOR)
+                img = Image.open(io.BytesIO(data))
                 decode = time.time()
 
-                self.__frontend.draw(img)
+                self.__to_numpy(img, buffer)
+                alloc = time.time()
+
+                self.__frontend.draw(buffer)
                 draw = time.time()
 
-                time_report(['recv', 'alloc', 'decode', 'draw'], [start, recv, alloc, decode, draw])
-                frame += 1
-                print('frame', frame)
+                time_report(['recv', 'decode', 'alloc', 'draw'], [start, recv, decode, alloc, draw])
+                print('frame', frames)
         elif self.__encoding == 'B0':
             while True:
                 start = time.time()
