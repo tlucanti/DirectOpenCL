@@ -11,10 +11,10 @@ keycode_dict = {
     pygame.BUTTON_LEFT: MOUSE_LEFT,
     pygame.BUTTON_RIGHT: MOUSE_RIGHT,
     pygame.BUTTON_MIDDLE: MOUSE_MIDDLE,
-    # MOUSE_4
-    # MOUSE_5
-    # MOUSE_6
-    # MOUSE_7
+    -1: MOUSE_4,
+    -1: MOUSE_5,
+    -1: MOUSE_6,
+    -1: MOUSE_7,
 
     pygame.BUTTON_WHEELUP: SCROLL_UP,
     pygame.BUTTON_WHEELDOWN: SCROLL_DOWN,
@@ -83,6 +83,7 @@ keycode_dict = {
     pygame.K_CAPSLOCK: KEY_CAPS,
     pygame.K_LSHIFT: KEY_LSHIFT,
     pygame.K_LCTRL: KEY_LCTRL,
+    -1: KEY_FN,
     pygame.K_LSUPER: KEY_LSUPER,
     pygame.K_LALT: KEY_LALT,
     pygame.K_RSHIFT: KEY_RSHIFT,
@@ -104,21 +105,21 @@ keycode_dict = {
     pygame.K_F13: KEY_F13,
     pygame.K_F14: KEY_F14,
     pygame.K_F15: KEY_F15,
-    # KEY_F16
-    # KEY_F17
-    # KEY_F18
-    # KEY_F19
+    -1: KEY_F16,
+    -1: KEY_F17,
+    -1: KEY_F18,
+    -1: KEY_F19,
 
-    # KEY_NUM_0
-    # KEY_NUM_1
-    # KEY_NUM_2
-    # KEY_NUM_3
-    # KEY_NUM_4
-    # KEY_NUM_5
-    # KEY_NUM_6
-    # KEY_NUM_7
-    # KEY_NUM_8
-    # KEY_NUM_9
+    -1: KEY_NUM_0,
+    -1: KEY_NUM_1,
+    -1: KEY_NUM_2,
+    -1: KEY_NUM_3,
+    -1: KEY_NUM_4,
+    -1: KEY_NUM_5,
+    -1: KEY_NUM_6,
+    -1: KEY_NUM_7,
+    -1: KEY_NUM_8,
+    -1: KEY_NUM_9,
 }
 
 keycode_dict[1105] = KEY_BACKQUOTE
