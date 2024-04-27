@@ -74,11 +74,20 @@ def gui_draw_circle(window, x, y, radius, color):
                 gui_set_pixel_safe(window, xx, yy, color)
 
 def gui_draw_borders(window, width, color):
-    for y in range(gui_height(window)):
+    for y in range(width):
         for x in range(gui_width(window)):
-            if x < width or x >= gui_width(window) - width or \
-               y < width or y >= gui_height(window) - width:
-                   gui_set_pixel(window, x, y, color)
+            gui_set_pixel(window, x, y, color)
+            gui_set_pixel(window, x, gui_height(window) - y - 1, color)
+
+    for x in range(width):
+        for y in range(gui_height(window)):
+            gui_set_pixel(window, x, y, color)
+            gui_set_pixel(window, gui_width(window) - x - 1, y, color)
+
+def gui_draw_rect(window, x0, y0, x1, y1, color):
+    for x in range(x0, x1 + 1):
+        for y in range(y0, y1 + 1):
+            gui_set_pixel(window, x, y, color)
 
 def gui_draw_line(window, x0, y0, x1, y1, color):
     dx = abs(x1 - x0)

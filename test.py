@@ -1,8 +1,9 @@
 
 
-#from py.frontend.TKwindow import TKwindow as Window
+from py.frontend.TKwindow import TKwindow as Window
 #from py.frontend.PYGAMEwindow import PYGAMEwindow as Window
-from py.frontend.WEBwindow import WEBwindow as Window
+#from py.frontend.WEBwindow import WEBwindow as Window
+#from py.frontend.QTwindow import QTwindow as Window
 
 from py.api import *
 
@@ -45,7 +46,9 @@ def main():
 
     frame = 0
     while True:
-        print('\rfps\t`    ', gui_get_fps(), end='')
+        print('\rfps\t    ', gui_get_fps(), end='')
+
+        gui_draw_borders(window, 4, COLOR_RED)
 
         gui_draw_circle(window, x, y, 40, COLOR_BLACK)
         x = (x + dx + width) % width
@@ -60,7 +63,7 @@ def main():
 
         gui_draw(window)
         frame += 1
-        print('sending frame', frame)
+        # print('sending frame', frame)
 
 if __name__ == '__main__':
     main()
