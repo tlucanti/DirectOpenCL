@@ -51,15 +51,9 @@ static void image_encode(unsigned *image, unsigned long size,
 			     unsigned char *dst, unsigned long *dst_size)
 {
 	for (unsigned long i = 0; i < size; i++) {
-#if COMPRESS_TYPE == 0
-		dst[i * 3 + 2] = (image[i] & 0xFF0000) >> 16u;  // red
+		dst[i * 3 + 0] = (image[i] & 0xFF0000) >> 16u;  // red
 		dst[i * 3 + 1] = (image[i] & 0x00FF00) >> 8u;   // green
-		dst[i * 3 + 0] = (image[i] & 0x0000FF);	 // blue
-# else
-		dst[i * 3 + 2] = (image[i] & 0xFF0000) >> 16u;  // red
-		dst[i * 3 + 1] = (image[i] & 0x00FF00) >> 8u;   // green
-		dst[i * 3 + 0] = (image[i] & 0x0000FF);	 // blue
-#endif
+		dst[i * 3 + 2] = (image[i] & 0x0000FF);	 // blue
 	}
 
 	*dst_size = size * 3;
@@ -264,7 +258,8 @@ void gui_set_pixel(struct gui_window *window, unsigned x, unsigned y, unsigned c
 {
 #ifdef CONFIG_GUILIB_DEBUG
 	if (x >= window->width || y >= window->height) {
-		fprintf(stderr, "gui_set_pixel(): out of bounds\n");
+		fprintf(stderr, "gui_set_pixel(): out of bounds: x %u/%u, y %u/%u\n",
+			x, gui_width(window), y, gui_height(window));
 	}
 #endif
 	gui_set_pixel_raw(window, (unsigned long)y * window->width + x, color);
