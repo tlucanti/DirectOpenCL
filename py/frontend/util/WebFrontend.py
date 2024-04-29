@@ -79,8 +79,6 @@ class WebFrontend():
                 data = pix_socket.do_recv(size)
                 assert len(data) == size
                 recv = time.time()
-                if frames % 2:
-                    continue
 
                 img = Image.open(io.BytesIO(data))
                 decode = time.time()

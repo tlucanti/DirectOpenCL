@@ -160,7 +160,7 @@ class PYGAMEwindow(GUIwindow):
 
     def __main_loop(self, width, height):
         pygame.init()
-        pygame.display.set_caption("pygame")
+        pygame.display.set_caption("guilib")
 
         self.__screen = pygame.display.set_mode((width, height))
         self.__started = True
