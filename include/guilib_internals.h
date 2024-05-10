@@ -6,6 +6,14 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#ifndef READ_ONCE
+# define READ_ONCE(__ref) (*(const volatile __typeof__(__ref) *)&(__ref))
+#endif
+
+#ifndef WRITE_ONCE
+# define WRITE_ONCE(__ref, __val) (*(volatile typeof(__ref) *)&(__ref) = (__val))
+#endif
+
 #ifndef __always_inline
 # define __always_inline inline __attribute__((__always_inline__))
 #endif
@@ -36,6 +44,10 @@
 
 #ifndef unlikely
 # define unlikely(expr) __builtin_expect(!!(expr), 0)
+#endif
+
+#ifndef unreachable
+# define unreachable() __builtin_unreachable()
 #endif
 
 #ifndef ARRAY_SIZE

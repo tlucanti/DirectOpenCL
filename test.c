@@ -1,7 +1,8 @@
 
+#include <ctype.h>
 #include <guilib.h>
-#include <stdguilib.h>
 #include <stdbool.h>
+#include <stdguilib.h>
 #include <stdio.h>
 
 static int gx, gy;
@@ -13,6 +14,13 @@ static void callback(struct gui_window *window, int keycode, bool pressed)
 {
 	const int step = pressed ? 10 : -10;
 	(void)window;
+
+	// if (pressed) {
+	// 	printf("pressed: %d", keycode);
+	// } else {
+	// 	printf("released: %d", keycode);
+	// }
+	// printf(" (%c)\r\n", isprint(keycode) ? keycode : ' ');
 
 	nr_pressed += pressed ? 1 : -1;
 	switch (keycode) {
@@ -52,7 +60,7 @@ int main()
 	gy = height / 2;
 	gui_mouse(window, &mx1, &my1);
 
-	while (true) {
+	while (!gui_closed(window)) {
 		gui_draw_borders(window, 2, COLOR_RED);
 
 		gui_draw_circle(window, gx, gy, 20, COLOR_BLACK);
@@ -69,8 +77,11 @@ int main()
 
 		gui_draw(window);
 
-		//printf("\rfps: %f\t", gui_get_fps());
+		printf("\rfps: %f\t", gui_get_fps());
 		//fflush(stdout);
 	}
+
+	gui_destroy(window);
+	gui_finalize();
 }
 

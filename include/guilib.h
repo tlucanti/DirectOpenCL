@@ -29,6 +29,11 @@ void gui_key_hook(struct gui_window *window, key_hook_t hook);
 void gui_mouse(struct gui_window *window, int *x, int *y);
 void gui_wfi(struct gui_window *window);
 
+bool gui_pressed(struct gui_window *window, unsigned char keycode);
+bool gui_closed(struct gui_window *window);
+
+#define GUI_CLOSED 255
+
 #define KEY_0 '0'
 #define KEY_1 '1'
 #define KEY_2 '2'
