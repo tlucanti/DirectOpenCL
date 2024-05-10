@@ -1,8 +1,12 @@
 
-CFLAGS = -Wall -Wextra -fdiagnostics-color=always -I include
+CFLAGS = -Wall -Wextra
+CFLAGS += -I include
+CFLAGS += -O2
+CFLAGS += -fdiagnostics-color=always
+
 PYFLAGS = $(CFLAGS) -fPIC
-SIXFLAGS = $(CFLAGS) -O2 -I ../libsixel/include
-STREAMFLAGS = $(CFLAGS) -O0 -g3 -I stream
+SIXFLAGS = $(CFLAGS) -I thirdparty/sixel
+STREAMFLAGS = $(CFLAGS) -I stream
 CC = gcc
 LD = gcc
 AR = ar rcs
@@ -18,7 +22,9 @@ CFLAGS += -D CONFIG_GUILIB_SIXEL_KEYBOARD_DELAY=$(CONFIG_GUILIB_SIXEL_KEYBOARD_D
 CFLAGS += -D CONFIG_GUILIB_SIXEL_MAX_FPS_RELAX=$(CONFIG_GUILIB_SIXEL_MAX_FPS_RELAX)
 CFLAGS += -D CONFIG_GUILIB_SIXEL_RAW_MODE=$(CONFIG_GUILIB_SIXEL_RAW_MODE)
 CFLAGS += -D CONFIG_GUILIB_SIXEL_KEYBOARD_ENABLE=$(CONFIG_GUILIB_SIXEL_KEYBOARD_ENABLE)
+CFLAGS += -D CONFIG_GUILIB_SIXEL_MOUSE_ENABLE=$(CONFIG_GUILIB_SIXEL_MOUSE_ENABLE)
 CFLAGS += -D CONFIG_GUILIB_SIXEL_WARN_UNKNOWN_ESCAPE=$(CONFIG_GUILIB_SIXEL_WARN_UNKNOWN_ESCAPE)
+CFLAGS += -D CONFIG_GUILIB_SIXEL_NO_DRAW=$(CONFIG_GUILIB_SIXEL_NO_DRAW)
 
 BRED     = "\033[01;31m"
 BGREEN   = "\033[01;32m"
@@ -35,12 +41,32 @@ AR_P = printf $(BMAGENTA)'AR\t'$(BRESET); echo
 LD_P = printf $(BCYAN)'LD\t'$(BRESET); echo
 ELF_P = printf $(BBLUE)'ELF\t'$(BRESET); echo
 RM_P = printf $(BRED)'RM\t'$(BRESET); echo
+TAR_P = printf $(BORANGE)'TAR\t'$(BRESET); echo
 
-all: lib sixel-test stream-test
+all: thirdparty lib sixel-test stream-test
+
+thirdparty/sixel/libsixel.a:
+	@$(MK_P) thirdparty/sixel
+	@mkdir -p thirdparty/sixel
+	@$(TAR_P) libsixel.tar.gz
+	@tar xf thirdparty/libsixel.tar.gz -C thirdparty/sixel
+
+thirdparty: thirdparty/sixel/libsixel.a
+.PHONY: thirdparty
+
+thirdparty-clean: thirdparty-sixel-clean
+.PHONY: thirdparty-clean
+
+thirdparty-sixel-clean:
+	@$(RM_P) thirdparty/sixel
+	@rm -rf thirdparty/sixel
+.PHONY: thirdparty-sixel-clean
 
 lib: py sixel stream
+.PHONY: lib
 
-clean: py-stdgui-clean py-lib-clean py-clean stdgui-clean sixel-clean stream-clean sixel-test-clean stream-test-clean
+clean: py-stdgui-clean py-lib-clean py-clean stdgui-clean sixel-clean stream-clean sixel-test-clean stream-test-clean thirdparty-clean
+.PHONY: clean
 
 build:
 	@$(MK_P) build
@@ -106,7 +132,7 @@ sixel: stdgui
 	@$(CC_P) sixel.o
 	@$(CC) $(SIXFLAGS) -c sixel/sixel.c -o build/sixel.o
 	@$(AR_P) sixel.o
-	@$(AR) libgui-sixel.a build/sixel.o
+	@$(AR) libgui-sixel.a build/sixel.o thirdparty/sixel/libsixel.a
 .PHONY: sixel
 
 sixel-clean:
@@ -145,7 +171,7 @@ sixel-test: sixel
 		-o guisixel.elf \
 		-lgui-sixel -lstdgui \
 		\
-		-L thirdparty -lsixel
+		-L thirdparty/sixel -lsixel
 .PHONY: sixel-test
 
 sixel-test-clean:
