@@ -36,10 +36,10 @@ COLOR_WHITE = Color(255, 255, 255)
 def gui_create(window: GUIwindow):
     window.__image = np.zeros([window.height(), window.width(), 3], dtype=np.uint8)
 
-def gui_width(window: GUIwindow):
+def gui_width(window: GUIwindow) -> int:
     return window.width()
 
-def gui_height(window: GUIwindow):
+def gui_height(window: GUIwindow) -> int:
     return window.height()
 
 def gui_draw(window: GUIwindow):
@@ -48,11 +48,17 @@ def gui_draw(window: GUIwindow):
 def gui_key_hook(window: GUIwindow, callback):
     window.key_hook(callback)
 
-def gui_mouse(window: GUIwindow):
+def gui_mouse(window: GUIwindow) -> tuple:
     return window.mouse()
 
 def gui_wfi(window: GUIwindow):
     window.wfi()
+
+def gui_pressed(window: GUIwindow, key: int) -> bool:
+    return window.pressed(key)
+
+def gui_closed(window: GUIwindow) -> bool:
+    return window.closed()
 
 def gui_set_pixel(window: GUIwindow, x: int, y: int, color: Color):
     window.__image[y][x] = color.array
@@ -120,14 +126,3 @@ def gui_get_fps():
     ret = 1 / (time.time() - __fps_time_prev)
     __fps_time_prev = time.time()
     return ret
-
-### CONSTANTS
-
-KEY_W = ord('w')
-KEY_A = ord('a')
-KEY_S = ord('s')
-KEY_D = ord('d')
-
-MOUSE_LEFT = 0
-MOUSE_RIGHT = 1
-MOUSE_MIDDLE = 2

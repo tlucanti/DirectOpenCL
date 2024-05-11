@@ -29,7 +29,7 @@ class GUIwindow():
         wait for interrupt
     """
 
-    def __init__(self, width, height, winid=None):
+    def __init__(self, width: int, height: int, winid=None):
         """
         Constructor reates new gui window with given window size
 
@@ -47,7 +47,7 @@ class GUIwindow():
         """
         pass
 
-    def width(self):
+    def width(self) -> int:
         """
         Get window width
 
@@ -58,7 +58,7 @@ class GUIwindow():
         """
         pass
 
-    def height(self):
+    def height(self) -> int:
         """
         Get window height
 
@@ -100,7 +100,7 @@ class GUIwindow():
         """
         pass
 
-    def mouse(self):
+    def mouse(self) -> tuple:
         """
         Get current position of mouse pointer
 
@@ -126,6 +126,26 @@ class GUIwindow():
         """
         pass
 
+    def pressed(self, key: int) -> bool:
+        """
+        Get status of keyboard key
+
+        Returns
+        -------
+        True if @key is pressed otherwise False
+        """
+
+    def closed(self) -> bool:
+        """
+        Get status of the window
+
+        Returns
+        -------
+        True if window was closed otherwise False
+        """
+
+
+GUI_CLOSED      = 255
 
 MOUSE_LEFT      = 0
 MOUSE_RIGHT     = 1
@@ -247,6 +267,8 @@ KEY_NUM_RIGHT = KEY_NUM_6
 KEY_NUM_UP = KEY_NUM_8
 
 KEY_NAMES = {
+    GUI_CLOSED: 'WINDOW CLOSE EVENT',
+
     MOUSE_LEFT: 'MOUSE LEFT',
     MOUSE_RIGHT: 'MOUSE RIGHT',
     MOUSE_MIDDLE: 'MOUSE MIDDLE',
