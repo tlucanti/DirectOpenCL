@@ -6,7 +6,7 @@ if [[ $GUILIB == '' ]]; then
         echo '============================================================================' >&2
         exit 1
 elif [[ $GUILIB == 'sixel' ]]; then
-        echo -n ' -lgui-sixel -lsixel '
+        echo -n ' -L ../GUIlib -L ../GUIlib/thirdparty/sixel -lgui-sixel -lsixel '
 elif [[ $GUILIB == 'stream' ]]; then
         echo -n ' -lgui-stream -ljpeg '
 else
