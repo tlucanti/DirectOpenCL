@@ -11,6 +11,7 @@ from .NetSock import TcpClient, UdpClient
 def time_report(names, times):
     assert len(names) + 1 == len(times)
 
+    return
     total = times[-1] - times[0]
     for i in range(len(names)):
         delta = times[i + 1] - times[i]
@@ -37,17 +38,22 @@ class WebFrontend():
         self.__encoding = self.__event_socket.recv_char()
         if self.__encoding == 'B':
             self.__encoding += self.__event_socket.recv_char()
+        else:
+            raise RuntimeError(f'unsupported encoding {self.__encoding}')
 
         self.__frontend = constructor(self.__width, self.__height)
         self.__frontend.key_hook(self.__key_callback)
 
-        threading.Thread(target=self.__draw_thread, args=[pix_socket]).start()
+        self.__should_stop = False
+        threading.Thread(target=self.__mouse_thread).start()
+        self.__draw_thread(pix_socket)
 
-        self.__mouse = None
-        while True:
+    def __mouse_thread(self):
+        mouse = None
+        while not self.__should_stop:
             xy = self.__frontend.mouse()
-            if self.__mouse != xy:
-                self.__mouse = xy
+            if mouse != xy:
+                mouse = xy
                 self.__event_socket.send('M', xy[0], xy[1])
             time.sleep(5e-2)
 
@@ -69,9 +75,10 @@ class WebFrontend():
 
     def __draw_thread(self, pix_socket):
         frames = 0
+        print('encoding', self.__encoding)
         if self.__encoding == 'B1':
             buffer = np.empty((self.__height, self.__width, 3), dtype=np.uint8)
-            while True:
+            while not self.__should_stop:
                 frames += 1
                 start = time.time()
 
@@ -90,9 +97,9 @@ class WebFrontend():
                 draw = time.time()
 
                 time_report(['recv', 'decode', 'alloc', 'draw'], [start, recv, decode, alloc, draw])
-                print('frame', frames)
+                # print('frame', frames)
         elif self.__encoding == 'B0':
-            while True:
+            while not self.__should_stop:
                 start = time.time()
 
                 size = pix_socket.recv_number()
@@ -108,8 +115,12 @@ class WebFrontend():
                 draw = time.time()
 
                 time_report(['recv', 'decode', 'draw'], [start, recv, decode, draw])
+        else:
+            raise RuntimeError(f'unknown encoding {self.__encoding}')
 
     def __key_callback(self, winid, keycode, pressed):
         event = 'K' if pressed else 'k'
         print('SEND', event, keycode)
         self.__event_socket.send(event, keycode)
+        if keycode == 255: # GUI_CLOSED
+            self.__should_stop = True

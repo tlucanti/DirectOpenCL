@@ -3,11 +3,13 @@ import time
 
 import pygame
 import numpy as np
-import threading
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from .GUIwindow import *
 
 keycode_dict = {
+    GUI_CLOSED: GUI_CLOSED,
+
     pygame.BUTTON_LEFT: MOUSE_LEFT,
     pygame.BUTTON_RIGHT: MOUSE_RIGHT,
     pygame.BUTTON_MIDDLE: MOUSE_MIDDLE,
@@ -127,18 +129,23 @@ keycode_dict[13] = KEY_ENTER
 keycode_dict[10] = KEY_ENTER
 
 class PYGAMEwindow(GUIwindow):
+
+    EVENT_INTERVAL = 0.1
+
     def __init__(self, width, height, winid=None):
         if winid is None:
             winid = self
         self.__winid = winid
         self.__callback = None
+        self.__pressed = [0] * 255
 
-        self.__loop_thread = threading.Thread(target=self.__main_loop, args=[width, height])
-        self.__loop_thread.start()
+        pygame.init()
+        pygame.display.set_caption("guilib")
+        self.__screen = pygame.display.set_mode((width, height))
 
-        self.__started = False
-        while not self.__started:
-            time.sleep(1e-5)
+        self.__sheduler = BackgroundScheduler()
+        self.__sheduler.add_job(self.__poll_events, 'interval', seconds=self.EVENT_INTERVAL, id='__poll_events')
+        self.__sheduler.start()
 
     def width(self):
         return pygame.display.get_surface().get_size()[0]
@@ -158,22 +165,30 @@ class PYGAMEwindow(GUIwindow):
         pygame.surfarray.pixels3d(self.__screen)[:] = image.transpose(1, 0, 2)
         pygame.display.flip()
 
-    def __main_loop(self, width, height):
-        pygame.init()
-        pygame.display.set_caption("guilib")
+    def pressed(self, key):
+        try:
+            return self.__pressed[key]
+        except IndexError:
+            return False
 
-        self.__screen = pygame.display.set_mode((width, height))
-        self.__started = True
+    def closed(self):
+        return self.pressed(GUI_CLOSED)
 
-        print('start thread')
-        while True:
-            event = pygame.event.wait()
-            if event.type == pygame.MOUSEMOTION:
+    def __poll_events(self):
+        # event = pygame.event.wait() # bloking call
+        events = pygame.event.get()
+
+        for event in events:
+            if event.type == pygame.NOEVENT:
                 continue
-
-            if event.type == pygame.QUIT:
-                break
+            elif event.type == pygame.MOUSEMOTION:
+                continue
+            elif event.type == pygame.QUIT:
+                self.__sheduler.remove_job('__poll_events')
+                key = GUI_CLOSED
+                pressed = True
             elif event.type == pygame.KEYDOWN:
+                print(event.key)
                 key = keycode_dict[event.key]
                 pressed = True
             elif event.type == pygame.KEYUP:
@@ -184,12 +199,12 @@ class PYGAMEwindow(GUIwindow):
                 pressed = True
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button in (pygame.BUTTON_WHEELUP, pygame.BUTTON_WHEELDOWN):
-                    continue
+                    return
                 key = keycode_dict[event.button]
                 pressed = False
             else:
                 continue
 
-            print(key, pressed)
+            print(KEY_NAMES[key], key, pressed)
             if self.__callback is not None:
                 self.__callback(self.__winid, key, pressed)
