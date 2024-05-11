@@ -2,17 +2,20 @@
 #include <guilib.h>
 #include <netsock.h>
 
-#include <stdio.h>
 #include <pthread.h>
-#include <stdlib.h>
-#include <errno.h>
 #include <unistd.h>
+
+#include <errno.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define COMPRESSION_TYPE CONFIG_GUILIB_STREAM_COMPRESSION_TYPE
 #define QUALITY CONFIG_GUILIB_STREAM_COMPRESSION_QUALITY
 
 struct gui_window {
+	unsigned char pressed_keys[256];
 	unsigned *raw_pixels;
 	struct soc_stream event_socket;
 	struct soc_stream pix_socket;
@@ -111,8 +114,16 @@ static void *key_reader_thread(void *winptr)
 		case 'K':
 		case 'k': {
 			bool pressed = (event == 'K');
-			int key = soc_recv_number(&window->event_socket);
-			printf("server: key %d %s\n", key, pressed ? "pressed" : "released");
+			unsigned int key = soc_recv_number(&window->event_socket);
+
+			if (key == GUI_CLOSED) {
+				window->key_reader_run = false;
+				printf("server: window closed\n");
+			} else {
+				printf("server: key %d %s\n", key, pressed ? "pressed" : "released");
+			}
+			window->pressed_keys[key] = pressed;
+
 			if (window->callback != NULL) {
 				while (true) {
 					pthread_spin_lock(&window->callback_lock);
@@ -195,6 +206,7 @@ int gui_create(struct gui_window *window, unsigned int width, unsigned int heigh
 	window->mouse_x = 0;
 	window->mouse_y = 0;
 	window->key_reader_run = true;
+	memset(window->pressed_keys, 0, 256);
 
 	window->raw_pixels = malloc(window->length * sizeof(unsigned));
 	if (window->raw_pixels == NULL) {
@@ -339,5 +351,15 @@ void gui_wfi(struct gui_window *window)
 	while (window->last_iterrupt_time < now) {
 		usleep(10000);
 	}
+}
+
+bool gui_closed(struct gui_window *window)
+{
+	return gui_pressed(window, GUI_CLOSED);
+}
+
+bool gui_pressed(struct gui_window *window, unsigned char keycode)
+{
+	return window->pressed_keys[keycode];
 }
 
