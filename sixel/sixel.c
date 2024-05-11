@@ -29,6 +29,9 @@
 
 #define MAX_FPS CONFIG_GUILIB_SIXEL_MAX_FPS_RELAX
 #define DELAY CONFIG_GUILIB_SIXEL_KEYBOARD_DELAY
+#define SHIFT_MODIFIER 1u
+#define CTRL_MODIFIER 2u
+#define ALT_MODIFIER 4u
 
 #define fprintf_lock(...)                           \
 	do {                                       \
@@ -54,10 +57,15 @@ struct gui_window {
 	sixel_dither_t *sixel_dither;
 };
 
-struct key_metadata {
+struct key_shared_metadata {
 	double last_press_time;
-	int keycode;
 	bool released;
+};
+
+struct key_metadata {
+	struct key_shared_metadata *shared;
+	int keycode;
+	unsigned modifiers;
 };
 
 static struct termios g_term_info;
@@ -72,6 +80,8 @@ static bool g_key_reader_thread_should_stop = false;
 
 static pthread_spinlock_t stdout_lock;
 static pthread_spinlock_t key_lock;
+
+char *shift_modifier_chars = ")!@#$%^&*(ABCDEFGHIJKLMNOPQRSTUVWXYZ_+{}|:\"<>?";
 
 unsigned char key_table[256] = {
 	['0'] = KEY_0,		[')'] = KEY_0,
@@ -176,16 +186,12 @@ __noret
 static void gui_abort(void)
 {
 	WRITE_ONCE(g_key_reader_thread_should_stop, true);
-	if (g_key_reader_thread_id != 0) {
-		pthread_join(g_key_reader_thread_id, NULL);
-	}
-
 	if (g_window != NULL) {
 		gui_destroy(g_window);
 	}
 
 	gui_finalize();
-	exit(1);
+	abort();
 	unreachable();
 }
 
@@ -235,9 +241,22 @@ static double time_now(void)
 	return (double)ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
-static void do_key_callback(int keycode, bool pressed)
+static void do_key_callback(int keycode, bool pressed, unsigned modifiers)
 {
 	WRITE_ONCE(g_pressed_keys[keycode], pressed);
+	if (modifiers & SHIFT_MODIFIER) {
+		WRITE_ONCE(g_pressed_keys[KEY_LSHIFT], pressed);
+		WRITE_ONCE(g_pressed_keys[KEY_RSHIFT], pressed);
+	}
+	if (modifiers & CTRL_MODIFIER) {
+		WRITE_ONCE(g_pressed_keys[KEY_LCTRL], pressed);
+		WRITE_ONCE(g_pressed_keys[KEY_RCTRL], pressed);
+	}
+	if (modifiers & ALT_MODIFIER) {
+		WRITE_ONCE(g_pressed_keys[KEY_LALT], pressed);
+		WRITE_ONCE(g_pressed_keys[KEY_RALT], pressed);
+	}
+
 	WRITE_ONCE(g_last_interrupt_time, time_now());
 	if (g_window->callback == NULL) {
 		return;
@@ -302,7 +321,7 @@ static int sixel_write(char *data, int size, void *arg)
 {
 	(void)arg;
 	if (CONFIG_GUILIB_SIXEL_NO_DRAW) {
-		printf("writing sixel data of size %d\r\n", size);
+		// printf("writing sixel data of size %d\r\n", size);
 		return 0;
 	}
 
@@ -318,46 +337,54 @@ static void *release_checker_thread(void *arg)
 
 	usleep(DELAY * 1e6f);
 	pthread_spin_lock(&key_lock);
-	if (time_now() - meta->last_press_time > DELAY && !meta->released) {
-		meta->released = true;
+	if (time_now() - meta->shared->last_press_time > DELAY && !meta->shared->released) {
+		meta->shared->released = true;
 		pthread_spin_unlock(&key_lock);
-		do_key_callback(meta->keycode, false);
+		do_key_callback(meta->keycode, false, meta->modifiers);
 	} else {
 		pthread_spin_unlock(&key_lock);
 	}
+
+	free(meta);
 	return NULL;
 }
 
-static void key_reader_event_tracker(int keycode)
+static void key_reader_event_tracker(int keycode, unsigned modifiers)
 {
-	static struct key_metadata meta[256] = {};
+	static struct key_shared_metadata shared_meta[256] = {};
 	static bool init = false;
+
+	struct key_metadata *meta = NULL;
 	pthread_t tid;
 	double time;
 	bool do_callback;
 
-	if (keycode == 0) {
-		return;
-	}
-
 	if (!init) {
 		init = true;
 		for (int i = 0; i < 256; i++) {
-			meta[i].released = false;
-			meta[i].last_press_time = 0;
-			meta[i].keycode = i;
+			shared_meta[i].released = false;
+			shared_meta[i].last_press_time = 0;
 		}
 	}
 
-	if (keycode >= 256) {
+	if (keycode == 0) {
+		return;
+	} else if (keycode >= 256) {
                 gui_perror_lock("keycode overflow");
                 return;
 	}
 
 	time = time_now();
-	do_callback = (time - meta[keycode].last_press_time > DELAY);
-	meta[keycode].last_press_time = time;
-	if (pthread_create(&tid, NULL, release_checker_thread, &meta[keycode])) {
+	pthread_spin_lock(&key_lock);
+	do_callback = (time - shared_meta[keycode].last_press_time > DELAY);
+	shared_meta[keycode].last_press_time = time;
+	pthread_spin_unlock(&key_lock);
+
+	meta = malloc(sizeof(struct key_metadata));
+	meta->keycode = keycode;
+	meta->modifiers = modifiers;
+	meta->shared = &shared_meta[keycode];
+	if (pthread_create(&tid, NULL, release_checker_thread, meta)) {
 		gui_perror_lock("release_checker_thread spawn fail");
 		abort();
 	}
@@ -368,10 +395,20 @@ static void key_reader_event_tracker(int keycode)
 
 	if (do_callback) {
 		pthread_spin_lock(&key_lock);
-		meta[keycode].released = false;
+		shared_meta[keycode].released = false;
 		pthread_spin_unlock(&key_lock);
-		do_key_callback(keycode, true);
+		do_key_callback(keycode, true, modifiers);
 	}
+}
+
+static void key_reader_event_tracker_raw(int keycode)
+{
+	unsigned modifiers = 0;
+
+	if (strchr(shift_modifier_chars, keycode)) {
+		modifiers |= SHIFT_MODIFIER;
+	}
+	key_reader_event_tracker(key_table[keycode], modifiers);
 }
 
 static void *key_reader_thread(void *arg)
@@ -405,7 +442,7 @@ static void *key_reader_thread(void *arg)
 			break;
 		default:
 			/* just regular letter or digit */
-			key_reader_event_tracker(key_table[c]);
+			key_reader_event_tracker_raw(c);
 			continue;
 		}
 		// continue;
@@ -433,25 +470,25 @@ static void *key_reader_thread(void *arg)
 				/* KEY_F1 key sequence is:
 				 * \eOP
 				 */
-				key_reader_event_tracker(KEY_F1);
+				key_reader_event_tracker(KEY_F1, 0);
 				break;
 			case 'Q':
 				/* KEY_F2 key sequence is:
 				 * \eOQ
 				 */
-				key_reader_event_tracker(KEY_F2);
+				key_reader_event_tracker(KEY_F2, 0);
 				break;
 			case 'R':
 				/* KEY_F3 key sequence is:
 				 * \eOR
 				 */
-				key_reader_event_tracker(KEY_F3);
+				key_reader_event_tracker(KEY_F3, 0);
 				break;
 			case 'S':
 				/* KEY_F4 key sequence is:
 				 * \eOS
 				 */
-				key_reader_event_tracker(KEY_F4);
+				key_reader_event_tracker(KEY_F4, 0);
 				break;
 			default:
 				WARN_UNKNOWN_ESCAPE(c);
@@ -474,25 +511,25 @@ static void *key_reader_thread(void *arg)
 			/* KEY_LEFT key sequence is:
 			 * \e[A
 			 */
-			key_reader_event_tracker(KEY_UP);
+			key_reader_event_tracker(KEY_UP, 0);
 			break;
 		case 'B':
 			/* KEY_DOWN key sequence is:
 			 * \e[B
 			 */
-			key_reader_event_tracker(KEY_DOWN);
+			key_reader_event_tracker(KEY_DOWN, 0);
 			break;
 		case 'C':
 			/* KEY_RIGHT key sequence is:
 			 * \e[C
 			 */
-			key_reader_event_tracker(KEY_RIGHT);
+			key_reader_event_tracker(KEY_RIGHT, 0);
 			break;
 		case 'D':
 			/* KEY_LEFT key sequence is:
 			 * \e[D
 			 */
-			key_reader_event_tracker(KEY_LEFT);
+			key_reader_event_tracker(KEY_LEFT, 0);
 			break;
 		case '1':
 		case '2':
@@ -556,7 +593,7 @@ static void *key_reader_thread(void *arg)
 				continue;
 			}
 
-			key_reader_event_tracker(button);
+			key_reader_event_tracker(button, 0);
 			break;
 
 		case '3':
@@ -574,7 +611,7 @@ static void *key_reader_thread(void *arg)
 				 * DEL is used for exiting
 				 */
                 		fprintf_lock(stderr, "prerssed 'DEL' exiting now\r\n");
-				do_key_callback(GUI_CLOSED, true);
+				do_key_callback(GUI_CLOSED, true, 0);
 				return NULL;
 			default:
 				WARN_UNKNOWN_ESCAPE(c);
@@ -627,18 +664,18 @@ static void *key_reader_thread(void *arg)
 					continue;
 				}
 
-				do_key_callback(button, pressed);
+				do_key_callback(button, pressed, 0);
 				break;
 			case 35:
 				/* mouse move */
 				break;
 			case 64:
 				/* mouse scroll up */
-				do_key_callback(SCROLL_UP, true);
+				do_key_callback(SCROLL_UP, true, 0);
 				break;
 			case 65:
 				/* mouse scroll down */
-				do_key_callback(SCROLL_DOWN, true);
+				do_key_callback(SCROLL_DOWN, true, 0);
 				break;
 			default:
 				WARN_UNKNOWN_ESCAPE(c);
@@ -846,7 +883,9 @@ int gui_draw(struct gui_window *window)
 	        pthread_spin_unlock(&stdout_lock);
                 return EFAULT;
 	}
-	string_write(STDOUT_FILENO, "\r\n");
+	if (!CONFIG_GUILIB_SIXEL_NO_DRAW) {
+		string_write(STDOUT_FILENO, "\r\n");
+	}
 	pthread_spin_unlock(&stdout_lock);
 
         return 0;
