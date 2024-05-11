@@ -1,7 +1,7 @@
 
 
-from py.frontend.TKwindow import TKwindow as Window
-#from py.frontend.PYGAMEwindow import PYGAMEwindow as Window
+# from py.frontend.TKwindow import TKwindow as Window
+from py.frontend.PYGAMEwindow import PYGAMEwindow as Window
 #from py.frontend.WEBwindow import WEBwindow as Window
 #from py.frontend.QTwindow import QTwindow as Window
 
@@ -41,12 +41,12 @@ def main():
 
     window = Window(width, height)
     gui_create(window)
-    gui_key_hook(window, callback)
+    gui_key_hook(window, test_callback)
     #gui_key_hook(window, test_callback)
 
     frame = 0
-    while True:
-        print('\rfps\t    ', gui_get_fps(), end='')
+    while not gui_closed(window):
+        # print('\rfps\t    ', gui_get_fps(), end='')
 
         gui_draw_borders(window, 4, COLOR_RED)
 
