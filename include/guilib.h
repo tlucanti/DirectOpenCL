@@ -2,6 +2,10 @@
 #ifndef GUILIB_H
 #define GUILIB_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <guilib_internals.h>
 
@@ -157,5 +161,9 @@ bool gui_closed(struct gui_window *window);
 #define COLOR_MAGENTA	0xFF00FF
 #define COLOR_YELLOW	0xFFFF00
 #define COLOR_PURPLE	COLOR_MAGENTA
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GUILIB_H */

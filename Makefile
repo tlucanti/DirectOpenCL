@@ -7,11 +7,12 @@ CFLAGS += -fdiagnostics-color=always
 PYFLAGS = $(CFLAGS) -fPIC
 SIXFLAGS = $(CFLAGS) -I thirdparty/sixel
 STREAMFLAGS = $(CFLAGS) -I stream
+GLFWFLAGS = $(CFLAGS)
 CC = gcc
 LD = gcc
 AR = ar rcs
 
-include .config
+include config
 CFLAGS += -D CONFIG_GUILIB_DEBUG=$(CONFIG_GUILIB_DEBUG)
 CFLAGS += -D CONFIG_GUILIB_VERBOSE=$(CONFIG_GUILIB_VERBOSE)
 
@@ -43,7 +44,7 @@ ELF_P = printf $(BBLUE)'ELF\t'$(BRESET); echo
 RM_P = printf $(BRED)'RM\t'$(BRESET); echo
 TAR_P = printf $(BORANGE)'TAR\t'$(BRESET); echo
 
-all: thirdparty lib sixel-test stream-test
+all: thirdparty lib test
 
 thirdparty/sixel/libsixel.a:
 	@$(MK_P) thirdparty/sixel
@@ -62,11 +63,20 @@ thirdparty-sixel-clean:
 	@rm -rf thirdparty/sixel
 .PHONY: thirdparty-sixel-clean
 
-lib: py sixel stream
+lib: py sixel stream opengl
 .PHONY: lib
 
-clean: py-stdgui-clean py-lib-clean py-clean stdgui-clean sixel-clean stream-clean sixel-test-clean stream-test-clean thirdparty-clean
+test: sixel-test stream-test opengl-test
+.PHONY: test
+
+clean: thirdparty-clean lib-clean test-clean
 .PHONY: clean
+
+lib-clean: py-clean sixel-clean stream-clean opengl-clean
+.PHONY: lib-clean
+
+test-clean: sixel-test-clean stream-test-clean opengl-test-clean
+.PHONY: test-clean
 
 build:
 	@$(MK_P) build
@@ -153,6 +163,20 @@ stream: stdgui
 	@$(AR) libgui-stream.a build/encode.o build/netsock.o build/stream.o
 .PHONY: stream
 
+opengl: stdgui
+	@$(CC_P) opengl.o
+	@$(CC) $(GLFWFLAGS) -c glfw/opengl.c -o build/opengl.o
+	@$(AR_P) libgui-opengl.a
+	@$(AR) libgui-opengl.a build/opengl.o
+.PHONY: opengl
+
+opengl-clean:
+	@$(RM_P) opengl.o
+	@rm -f build/opengl.o
+	@$(RM_P) libgui-opengl.a
+	@$(RM_P) libgui-opengl.a
+.PHONY: opengl-clean
+
 stream-clean:
 	@$(RM_P) encode.o
 	@rm -f build/encode.o
@@ -193,4 +217,19 @@ stream-test-clean:
 	@$(RM_P) guistream.elf
 	@rm -f guistream.elf
 .PHONY: stream-test-clean
+
+opengl-test: opengl
+	@$(ELF_P) guiopengl.elf
+	@$(CC) $(CFLAGS) -L .\
+		test.c \
+		-o guiopengl.elf \
+		-lgui-opengl -lstdgui \
+		\
+		-lOpenGL -lglfw
+.PHONY: opengl-test
+
+opengl-test-clean:
+	@$(RM_P) guiopengl.elf
+	@rm -f guiopengl.elf
+.PHONY: opengl-test-clean
 
