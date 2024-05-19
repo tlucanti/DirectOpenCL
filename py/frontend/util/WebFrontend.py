@@ -46,6 +46,8 @@ class WebFrontend():
 
         self.__should_stop = False
         threading.Thread(target=self.__mouse_thread).start()
+
+        self.__event_socket.send('S')
         self.__draw_thread(pix_socket)
 
     def __mouse_thread(self):

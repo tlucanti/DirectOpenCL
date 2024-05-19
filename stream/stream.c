@@ -34,6 +34,7 @@ struct gui_window {
 	pthread_t key_thread;
 	volatile bool key_reader_run;
 	volatile double last_iterrupt_time;
+	volatile bool ready_to_start;
 };
 
 static int g_event_server;
@@ -111,6 +112,9 @@ static void *key_reader_thread(void *winptr)
 		window->last_iterrupt_time = time_now();
 
 		switch (event) {
+		case 'S':
+			WRITE_ONCE(window->ready_to_start, true);
+			break;
 		case 'K':
 		case 'k': {
 			bool pressed = (event == 'K');
@@ -219,6 +223,7 @@ int gui_create(struct gui_window *window, unsigned int width, unsigned int heigh
 	soc_server_accept(g_pix_server, &window->pix_socket);
 	soc_server_accept(g_event_server, &window->event_socket);
 
+	window->ready_to_start = false;
 	if (pthread_create(&window->key_thread, NULL, key_reader_thread, window)) {
 		gui_perror("key_reader thread spawn fail");
 		err = EFAULT;
@@ -236,6 +241,8 @@ int gui_create(struct gui_window *window, unsigned int width, unsigned int heigh
 		gui_panic("invalid image compress type");
 	}
 	soc_send_flush(&window->event_socket);
+
+	while (READ_ONCE(window->ready_to_start) == 0) {}
 
 	return 0;
 
