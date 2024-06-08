@@ -58,6 +58,9 @@ void gui_draw_line(struct gui_window *window, unsigned x0, unsigned y0,
 	err = dx + dy;
 
 	while (true) {
+		if (x0 > gui_width(window) && y0 > gui_height(window)) {
+			break;
+		}
 		gui_set_pixel_safe(window, x0, y0, color);
 
 		if (x0 == x1 && y0 == y1) {
