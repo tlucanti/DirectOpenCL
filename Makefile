@@ -1,7 +1,7 @@
 
 CFLAGS = -Wall -Wextra
 CFLAGS += -I include
-CFLAGS += -O2
+CFLAGS += -O2 -g3
 CFLAGS += -fdiagnostics-color=always
 
 PYFLAGS = $(CFLAGS) -fPIC

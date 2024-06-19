@@ -50,6 +50,7 @@ int main()
 	struct gui_window *window;
 	const int width = 800, height = 600;
 	int mx1, my1, mx2, my2;
+	int frame = 0;
 
 	gui_bootstrap();
 	window = gui_alloc();
@@ -61,6 +62,7 @@ int main()
 	gui_mouse(window, &mx1, &my1);
 
 	while (!gui_closed(window)) {
+		frame++;
 		gui_draw_borders(window, 2, COLOR_RED);
 
 		gui_draw_circle(window, gx, gy, 20, COLOR_BLACK);
@@ -77,8 +79,9 @@ int main()
 
 		gui_draw(window);
 
+		// printf("frame: %d\r\n", frame);
 		printf("\rfps: %f\t", gui_get_fps());
-		//fflush(stdout);
+		fflush(stdout);
 	}
 
 	gui_destroy(window);
